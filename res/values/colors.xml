@@ -1,0 +1,43 @@
+<resources>
+    
+	<!-- 通用颜色 -->
+    <drawable name="bg_color">#e8e8e8</drawable> <!-- 界面统一背景 -->
+    <drawable name="title_color">#f1f1f1</drawable>
+    <drawable name="yellow">#ffff00</drawable>
+	<drawable name="black">#000000</drawable>
+	<drawable name="blue">#558FF2</drawable>
+	<drawable name="transation">#00000000</drawable>
+	<color name="red">#FFFF0000</color>
+	<color name = "white">#ffffff</color>
+	<color name="author_grey">#c7d1d2</color>
+	<color name="title_blue">#55c1df</color>
+	
+
+	<!-- 微信 -->
+    <color name="blue">#ffccddff</color>
+    <color name="grey">#58616d</color>
+    <color name="darkgrey">#ff404040</color>
+    <color name="toasterro">#9fd524</color>
+    <color name="lightgrey">#ff888888</color>
+    <color name="semitransparent">#80000000</color>
+    <color name="lightransparent">#a0000000</color>
+    <color name="navpage">#FFE1E8EB</color>
+    <color name="editpic_edittext">#629E8F</color>
+    <color name="editpic_gifword">#086268</color>
+    
+    <!-- Umeng组件使用颜色 -->
+    <color name="body_text_1">#ff000000</color>
+    <color name="body_text_2">#99000000</color>
+    <color name="body_text_disabled">#66000000</color>
+    <color name="body_text_1_inverse">#ffffffff</color>
+    <color name="body_text_2_inverse">#99ffffff</color>
+    <color name="accent_1">#ff29549f</color>
+    <color name="hyperlink">#ffff549f</color>
+    <color name="background_1">#ffffffff</color>
+    <color name="whats_on_separator">#4d000000</color>
+    <color name="all_track_color">#ff222222</color>
+    <color name="block_column_1">#ff0fabff</color>
+    <color name="block_column_2">#ffdf1831</color>
+    <color name="block_column_3">#ff009939</color>
+
+</resources>

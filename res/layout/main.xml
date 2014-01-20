@@ -1,0 +1,89 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/main_bg" >
+   	<Button
+        android:layout_marginTop="300dp"
+        android:id="@+id/main_btn_storymode"        
+        android:layout_centerHorizontal="true"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"        
+        android:background="@drawable/main_btn_story_sel"
+        />
+     <Button        
+        android:id="@+id/main_btn_facemode"
+        android:layout_below="@id/main_btn_storymode"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="30dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/main_btn_face_sel"
+        />
+     <Button
+        android:id="@+id/main_btn_fb"
+        android:layout_below="@id/main_btn_facemode"
+        android:layout_centerHorizontal="true"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="30dp"
+        android:text="反馈意见"
+        android:textColor="#363636"
+        android:textSize="24sp" 
+        android:visibility="invisible"/>
+    <!-- 外围 -->
+
+<!--  
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:orientation="horizontal"
+        android:layout_marginTop="250dp"
+       	>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            >
+	
+            <Button
+                android:id="@+id/main_btn_makegif"
+                android:layout_width="100dp"
+                android:layout_height="100dp"
+                android:background="@drawable/main_btn_makegif_sel" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:text="制作"
+                android:textSize="20sp"
+                android:textColor="#363636" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+             android:layout_marginLeft="30dp"
+            android:orientation="vertical" >
+
+            <Button
+                android:id="@+id/main_btn_fb"
+                android:layout_width="100dp"
+                android:layout_height="100dp"
+               
+                android:background="@drawable/main_btn_fb_sel" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:text="反馈"
+                android:textColor="#363636"
+                android:textSize="20sp" />
+        </LinearLayout>
+    </LinearLayout>
+-->
+</RelativeLayout>

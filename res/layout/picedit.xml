@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FDF7E8" >
+	<!-- 顶部的topbar -->
+    <include
+        android:id="@+id/picedit_topbar"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        layout="@layout/topbar" />
+    <!-- 底部的toolbar -->
+    
+    <LinearLayout
+        android:id="@+id/picedit_toolbar"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="0dp"
+        android:paddingBottom="5dp"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        >
+        <!-- 更换形象-->
+        <Button
+            android:id="@+id/changehead"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"            
+            android:background="@drawable/picedit_toolbar_btn_changehead_sel"
+            android:layout_weight="1"/>
+        <!-- 更换动作-->
+        <Button
+            android:id="@+id/changebody"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"                        
+            android:background="@drawable/picedit_toolbar_btn_changebody_sel"
+            android:layout_weight="1"/>             
+		<!-- 拍摄背景 -->                
+        <Button
+            android:id="@+id/camera"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"           
+            android:layout_weight="1"
+            android:background="@drawable/picedit_toolbar_btn_camera_sel"/>
+        <!-- android:text="@string/app_camera" -->    
+            
+        
+        <!-- 在图片上添加文字 -->
+        <Button
+            android:id="@+id/addword"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:background="@drawable/picedit_toolbar_btn_addword_sel"
+            android:layout_weight="1"/>     
+            <!-- android:text="@string/app_addword" --> 
+            
+    </LinearLayout>
+
+	
+    <!-- 帮助按钮 -->
+    <!-- 
+    <Button
+        android:id="@+id/help"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_toRightOf="@id/picedit_toolbar"
+        android:layout_alignParentBottom="true"
+        android:background="@drawable/picedit_toolbar_btn_help_sel" />
+     -->
+	<!-- 中间 图片层的布局  -->
+	<RelativeLayout
+	    android:id="@+id/picedit_rellayout"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_above="@id/picedit_toolbar"
+        android:layout_below="@id/picedit_topbar" 
+        android:layout_centerVertical="true"
+        >
+        <ImageView
+            android:id="@+id/gifBg"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:scaleType="fitCenter"
+            />
+        <ImageView
+            android:id="@+id/edit_head"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:scaleType="fitCenter"/>
+
+        <com.showgif.gifview.GifView
+            android:id="@+id/edit_body"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:scaleType="fitCenter">   
+        </com.showgif.gifview.GifView>  
+ 
+	    <Button
+	        android:id="@+id/delCamera"
+	        android:layout_width="wrap_content"
+	        android:layout_height="wrap_content"
+	        android:layout_alignParentRight="true"
+	        android:background="@drawable/picedit_toolbar_btn_deletecamara_sel">
+        </Button>
+        
+		<TextView
+	        android:id="@+id/gif_showword"
+	        android:layout_width="wrap_content"
+	        android:layout_height="wrap_content"
+	        android:layout_centerHorizontal="true"
+	        android:background="@android:color/transparent"
+	        android:singleLine="true"
+	        android:maxLength="9"
+	        android:textColor="@android:color/white"
+	        android:textSize="30sp"
+	        android:textStyle="bold"
+	        android:shadowDx="0"
+	        android:shadowDy="0"
+	        android:shadowColor="@android:color/black"
+	     	android:shadowRadius="5"
+	        android:layout_alignParentBottom="true"
+	        android:layout_marginBottom="20dp"/>
+		<ImageView
+		    android:id="@+id/help_anim_hand1"
+		    android:layout_width="fill_parent"
+		    android:layout_height="fill_parent"
+            android:scaleType="fitCenter"
+            android:background="@drawable/picedit_help_hand1"
+		    />
+		<ImageView
+		    android:id="@+id/help_anim_hand2"
+		    android:layout_width="fill_parent"
+		    android:layout_height="fill_parent"
+            android:scaleType="fitCenter"
+            android:background="@drawable/picedit_help_hand1"
+		    />
+		<ImageView
+            android:id="@+id/gifBorder"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:scaleType="fitCenter"
+            android:background="@drawable/bg_border"/>
+    </RelativeLayout>
+
+	<!-- 选择头像 -->
+  
+
+    <HorizontalScrollView
+	    android:id="@+id/head_chs_list"
+	    android:layout_width="wrap_content"
+    	android:layout_height="wrap_content"
+    	android:layout_above="@id/picedit_toolbar"
+    	android:scrollbars="none"
+    	android:background="#7f666666"
+    	android:visibility="invisible">
+	    <LinearLayout 
+	        android:layout_width="wrap_content"
+	    	android:layout_height="wrap_content"
+			android:id="@+id/headchslayout"
+			android:orientation="horizontal">
+		</LinearLayout>				
+	</HorizontalScrollView>
+	
+    <HorizontalScrollView
+	    android:id="@+id/body_chs_list"
+	    android:layout_width="fill_parent"
+    	android:layout_height="wrap_content"
+    	android:layout_centerHorizontal="true"
+    	android:layout_above="@id/picedit_toolbar"
+    	android:scrollbars="none"
+    	android:background="#7f666666"
+    	android:visibility="invisible">
+	    <LinearLayout 
+	        android:layout_width="wrap_content"
+	    	android:layout_height="wrap_content"
+			android:id="@+id/bodychslayout"
+			android:orientation="horizontal">
+		</LinearLayout>				
+	</HorizontalScrollView>
+    
+	<LinearLayout
+        android:id="@+id/headbody_chs_lay2"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_above="@id/head_chs_list"
+        android:layout_marginBottom="10dp"
+        android:orientation="horizontal"
+        android:background="#7f666666">
+	    <ImageView 
+	        android:layout_width="wrap_content"
+	        android:layout_height="wrap_content"
+	        android:layout_weight="1"
+	        android:id="@+id/headbody_chs_lay2_img1"
+	        
+	        />
+	     <ImageView 
+	        android:layout_width="wrap_content"
+	        android:layout_height="wrap_content"
+	        android:layout_weight="1"
+	        android:id="@+id/headbody_chs_lay2_img2"
+	        /> 
+	     <ImageView 
+	        android:layout_width="wrap_content"
+	        android:layout_height="wrap_content"
+	        android:layout_weight="1"
+	        android:id="@+id/headbody_chs_lay2_img3"   
+	        /> 
+	     <ImageView 
+	        android:layout_width="wrap_content"
+	        android:layout_height="wrap_content"
+	        android:layout_weight="1"
+	        android:id="@+id/headbody_chs_lay2_img4"
+	        />
+	    
+    </LinearLayout>
+    
+    <!-- 选择身体 -->
+    <RelativeLayout 
+        android:id="@+id/choose_bar_body"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_above="@id/picedit_toolbar"
+        android:layout_centerHorizontal="true" >
+	    <LinearLayout
+            android:id="@+id/container_body"
+       		android:layout_width="wrap_content"
+	        android:layout_height="wrap_content"
+	        android:orientation="horizontal"
+	        android:gravity="top"
+	        android:background="#7f666666">	        
+        </LinearLayout>
+        <HorizontalScrollView           
+            android:id="@+id/h_scrollview_body"
+            android:layout_below="@id/container_body"
+        	android:layout_width="fill_parent"
+        	android:layout_height="wrap_content"
+        	android:scrollbars="none">
+	        <LinearLayout 
+	            android:id="@+id/l_scrollview_body"
+	            android:orientation="horizontal"
+	            android:layout_width="fill_parent"
+	            android:layout_height="wrap_content"
+	            android:gravity="top"
+	            android:background="#fdb67e">
+	        </LinearLayout>
+        </HorizontalScrollView>	     
+    </RelativeLayout>
+</RelativeLayout>

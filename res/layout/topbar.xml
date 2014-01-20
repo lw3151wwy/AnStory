@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Header Bar  -->
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/pub_topbar"
+    android:layout_width="fill_parent"
+    android:layout_height="80dp"
+    android:background="#60D1DF">
+ 
+    <Button
+        android:id="@+id/topbar_btn_back"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_centerVertical="true"
+        android:layout_centerHorizontal="true"
+        android:background="@drawable/picedit_topbar_btn_left_sel"
+        android:visibility="invisible"/>
+
+    <TextView
+        android:id="@+id/topbar_titletxt"
+        android:layout_width="wrap_content"
+        android:layout_centerVertical="true"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:background="@drawable/topbar_txt_edit"/>
+    
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerVertical="true"
+        android:layout_centerHorizontal="true"
+        android:id="@+id/topbar_btn_right"
+        android:layout_alignParentRight="true"
+        android:background="@drawable/picedit_topbar_btn_right_sel" 
+        android:visibility="invisible" />
+    <!--  
+    <ImageView
+        android:id="@+id/picedit_helptop"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_centerVertical="true"
+        android:visibility="invisible"
+        android:background="@drawable/helptop"
+        android:scaleType="fitXY"/>
+        -->
+</RelativeLayout>
