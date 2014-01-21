@@ -311,6 +311,7 @@ public class Util {
 		AssetManager am = ctx.getAssets();
 		InputStream is = null;
 		try {
+			Log.v("123",foldName + File.separator + fileName);
 			 is = am.open(foldName + File.separator + fileName);
 			 image = BitmapFactory.decodeStream(is);
 		} catch (Exception e) {

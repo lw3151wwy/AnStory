@@ -25,14 +25,14 @@
             android:id="@+id/changehead"
             android:layout_width="0dp"
             android:layout_height="wrap_content"            
-            android:background="@drawable/picedit_toolbar_btn_changehead_sel"
+            android:background="@drawable/picedit_toolbar_btn_changehead_nor"
             android:layout_weight="1"/>
         <!-- 更换动作-->
         <Button
             android:id="@+id/changebody"
             android:layout_width="0dp"
             android:layout_height="wrap_content"                        
-            android:background="@drawable/picedit_toolbar_btn_changebody_sel"
+            android:background="@drawable/picedit_toolbar_btn_changebody_nor"
             android:layout_weight="1"/>             
 		<!-- 拍摄背景 -->                
         <Button
@@ -108,8 +108,9 @@
 	        android:layout_height="wrap_content"
 	        android:layout_centerHorizontal="true"
 	        android:background="@android:color/transparent"
-	        android:singleLine="true"
-	        android:maxLength="9"
+	        android:gravity="center"
+	        android:maxLength="30"
+	        android:maxLines="2"
 	        android:textColor="@android:color/white"
 	        android:textSize="30sp"
 	        android:textStyle="bold"
@@ -146,11 +147,12 @@
 
     <HorizontalScrollView
 	    android:id="@+id/head_chs_list"
-	    android:layout_width="wrap_content"
+	    android:layout_width="fill_parent"
     	android:layout_height="wrap_content"
+    	android:layout_centerHorizontal="true"
     	android:layout_above="@id/picedit_toolbar"
     	android:scrollbars="none"
-    	android:background="#7f666666"
+    	android:background="#fdb67e"
     	android:visibility="invisible">
 	    <LinearLayout 
 	        android:layout_width="wrap_content"
@@ -167,7 +169,7 @@
     	android:layout_centerHorizontal="true"
     	android:layout_above="@id/picedit_toolbar"
     	android:scrollbars="none"
-    	android:background="#7f666666"
+    	android:background="#fdb67e"
     	android:visibility="invisible">
 	    <LinearLayout 
 	        android:layout_width="wrap_content"
@@ -181,8 +183,7 @@
         android:id="@+id/headbody_chs_lay2"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
-        android:layout_above="@id/head_chs_list"
-        android:layout_marginBottom="10dp"
+        android:layout_above="@id/head_chs_list"        
         android:orientation="horizontal"
         android:background="#7f666666">
 	    <ImageView 

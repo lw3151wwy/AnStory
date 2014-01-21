@@ -160,6 +160,12 @@ public class PicShareActivity extends Activity {
 		Button btnShare2Weixin = (Button) findViewById(R.id.share2weixin);
 		btnShare2Weixin.setOnClickListener(new OnClickListener() {
 			public void onClick(View v) {
+				if (showGif.animationRun){
+					Log.v(TAG, "销毁"+showGif.animationRun);
+					showGif.pauseGifAnimation();
+					showGif.destroy();
+					Log.v(TAG, "销毁"+showGif.animationRun);
+				}
 				final String path = Util.getAppStorePath() + File.separator + AppConstantS.GIF_STORENAME;
 				WXEmojiObject emoji = new WXEmojiObject();
 				emoji.emojiPath = path;
@@ -184,6 +190,12 @@ public class PicShareActivity extends Activity {
 		Button btnShare2SinaWeibo = (Button) findViewById(R.id.share2sinaweibo);
 		btnShare2SinaWeibo.setOnClickListener(new OnClickListener() {
 			public void onClick(View v) {
+				if (showGif.animationRun){
+					Log.v(TAG, "销毁"+showGif.animationRun);
+					showGif.pauseGifAnimation();
+					showGif.destroy();
+					Log.v(TAG, "销毁"+showGif.animationRun);
+				}
 				mWeibo = Weibo.getInstance(AppConstantS.APP_KEY,
 						AppConstantS.REDIRECT_URL);
 				mSsoHandler = new SsoHandler(PicShareActivity.this, mWeibo);
@@ -201,6 +213,12 @@ public class PicShareActivity extends Activity {
 		Button btnShare2Renren = (Button) findViewById(R.id.share2renren);
 		btnShare2Renren.setOnClickListener(new OnClickListener() {	
 			public void onClick(View v) {
+				if (showGif.animationRun){
+					Log.v(TAG, "销毁"+showGif.animationRun);
+					showGif.pauseGifAnimation();
+					showGif.destroy();
+					Log.v(TAG, "销毁"+showGif.animationRun);
+				}
 				if(rennClient==null) {
 					rennClient = RennClient.getInstance(PicShareActivity.this);
 				}

@@ -13,6 +13,7 @@ import android.content.Context;
 import android.content.CursorLoader;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnCancelListener;
+import android.content.res.Configuration;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
@@ -32,6 +33,7 @@ import android.os.Handler;
 import android.os.Message;
 import android.provider.MediaStore;
 import android.text.Layout.Alignment;
+import android.text.InputFilter;
 import android.text.StaticLayout;
 import android.text.TextPaint;
 import android.util.Log;
@@ -39,6 +41,7 @@ import android.view.GestureDetector;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.View.OnClickListener;
 import android.view.View.OnTouchListener;
 import android.view.WindowManager;
@@ -62,7 +65,6 @@ import com.dream.anstory.listener.ShakeListener.OnShakeListener;
 import com.dream.anstory.util.AppConstantS;
 import com.dream.anstory.util.GifModel;
 import com.dream.anstory.util.Util;
-import com.renn.rennsdk.exception.ForbiddenException;
 import com.showgif.gifview.GifImageType;
 import com.showgif.gifview.GifView;
 import com.showgif.jpg2gif.JpgToGif;
@@ -539,12 +541,14 @@ public class PicEditActivity extends Activity implements OnClickListener {
 			public void onClick(View v) {
 				final View addWordDig = getLayoutInflater().inflate(R.layout.addword_dialog, null);
 				final EditText gifEditWord = (EditText) addWordDig.findViewById(R.id.gif_editword);
+				gifEditWord.setFilters(new InputFilter[]{new InputFilter.LengthFilter(30)});
 				//自动使用上次输入的内容
 				if(gifShowWord!=null) {
 					gifEditWord.setText(gifShowWord.getText().toString());
 				}
+				gifShowWord.setMaxWidth(devWid-devWid/10);
 				AlertDialog aDlg = new AlertDialog.Builder(PicEditActivity.this)
-				.setTitle("添加文字(不超过九个字符)")
+				.setTitle("添加文字(不超过30字符)")
 				.setView(addWordDig)
 				.setPositiveButton("确定", new DialogInterface.OnClickListener() {
 					public void onClick(DialogInterface dialog, int whichButton) {
@@ -588,12 +592,22 @@ public class PicEditActivity extends Activity implements OnClickListener {
 		mainLayoutBody = (LinearLayout)this.findViewById(R.id.bodychslayout);
 		//头部和身子的2级菜单
 		chsHeadBodyLay2 = (LinearLayout) this.findViewById(R.id.headbody_chs_lay2);
+		chsHeadBodyLay2.setVisibility(View.INVISIBLE);
 		// ARRLIST存放子容器，子容器用来显示不同的头身子图选项
 		lay2Ivs = new ArrayList<ImageView>();
 		lay2Ivs.add((ImageView) this.findViewById(R.id.headbody_chs_lay2_img1));
 		lay2Ivs.add((ImageView) this.findViewById(R.id.headbody_chs_lay2_img2));
 		lay2Ivs.add((ImageView) this.findViewById(R.id.headbody_chs_lay2_img3));
 		lay2Ivs.add((ImageView) this.findViewById(R.id.headbody_chs_lay2_img4));
+		//设置2级菜单的子容器的大小与背景
+		lay2Ivs.get(0).setLayoutParams(new LinearLayout.LayoutParams(devWid/4, devWid/4));
+		//lay2Ivs.get(0).setBackgroundResource(R.drawable.picedit_select);
+		lay2Ivs.get(1).setLayoutParams(new LinearLayout.LayoutParams(devWid/4, devWid/4));
+		//lay2Ivs.get(1).setBackgroundResource(R.drawable.picedit_select);
+		lay2Ivs.get(2).setLayoutParams(new LinearLayout.LayoutParams(devWid/4, devWid/4));
+		//lay2Ivs.get(2).setBackgroundResource(R.drawable.picedit_select);
+		lay2Ivs.get(3).setLayoutParams(new LinearLayout.LayoutParams(devWid/4, devWid/4));		
+		//lay2Ivs.get(3).setBackgroundResource(R.drawable.picedit_select);
 		// 以两个按钮ID记录两个按钮的开关属性，初始默认关闭，点击后开启并改变按钮ID
 		changehead.setTag(BUTTON_CLOSE);
 		changebody.setTag(BUTTON_CLOSE);
@@ -632,7 +646,9 @@ public class PicEditActivity extends Activity implements OnClickListener {
 				chsBodyHsv.setVisibility(View.INVISIBLE);
 				chsHeadBodyLay2.setVisibility(View.INVISIBLE);
 				changehead.setTag(BUTTON_CLOSE);
+				changehead.setBackgroundResource(R.drawable.picedit_toolbar_btn_changehead_nor);
 				changebody.setTag(BUTTON_CLOSE);
+				changebody.setBackgroundResource(R.drawable.picedit_toolbar_btn_changebody_nor);
 				gifBody.restartGifAnimation();
 				return gestureMyIvDetector.onTouchEvent(event);
 			}
@@ -647,7 +663,8 @@ public class PicEditActivity extends Activity implements OnClickListener {
 					// 当点击头部按钮操作为：关闭--〉打开
 					// 1、改变头部TAG属性为打开
 					// 2、 显示第一行头部菜单
-					changehead.setTag(BUTTON_OPEN);
+					changehead.setTag(BUTTON_OPEN);					
+					changehead.setBackgroundResource(R.drawable.picedit_toolbar_btn_changehead_pressed);
 					chsHeadHsv.setVisibility(View.VISIBLE);
 					// 3、 如果此时身子菜单为打开状态
 					// （１）设置身子按钮ＴＡＧ属性为关闭
@@ -656,6 +673,7 @@ public class PicEditActivity extends Activity implements OnClickListener {
 						changebody.setTag(BUTTON_CLOSE);
 						chsBodyHsv.setVisibility(View.INVISIBLE);
 						chsHeadBodyLay2.setVisibility(View.INVISIBLE);
+						changebody.setBackgroundResource(R.drawable.picedit_toolbar_btn_changebody_nor);
 					}
 					// 4、清除之前头部相关按钮的选中状态
 					cancelLayer1HeadChs();
@@ -667,6 +685,7 @@ public class PicEditActivity extends Activity implements OnClickListener {
 					changehead.setTag(BUTTON_CLOSE);
 					chsHeadHsv.setVisibility(View.INVISIBLE);
 					chsHeadBodyLay2.setVisibility(View.INVISIBLE);
+					changehead.setBackgroundResource(R.drawable.picedit_toolbar_btn_changehead_nor);
 					gifBody.restartGifAnimation();
 				}
 			}
@@ -681,17 +700,18 @@ public class PicEditActivity extends Activity implements OnClickListener {
 				if ((Integer) v.getTag() == BUTTON_CLOSE) {
 					// 当点击身子按钮操作为：关闭--〉打开
 					// 1、改变身子按钮TAG属性为打开
-					// 2、 显示第一行身子菜单
+					// 2、 显示第一行身子菜单					
+					changebody.setBackgroundResource(R.drawable.picedit_toolbar_btn_changebody_pressed);
 					changebody.setTag(BUTTON_OPEN);
 					chsBodyHsv.setVisibility(View.VISIBLE);
 					// 3、 如果此时头部菜单为打开状态
 					// （１）设置头部按钮ＴＡＧ属性为关闭
 					// （２）隐藏头部的两个菜单
-					
 					if ((Integer) changehead.getTag() == BUTTON_OPEN) {
 						changehead.setTag(BUTTON_CLOSE);
 						chsHeadHsv.setVisibility(View.INVISIBLE);
 						chsHeadBodyLay2.setVisibility(View.INVISIBLE);
+						changehead.setBackgroundResource(R.drawable.picedit_toolbar_btn_changehead_nor);
 					}
 					// 4、清除之前身子相关按钮的选中状态
 					cancelLayer1BodyChs();
@@ -704,6 +724,7 @@ public class PicEditActivity extends Activity implements OnClickListener {
 					changebody.setTag(BUTTON_CLOSE);
 					chsBodyHsv.setVisibility(View.INVISIBLE);
 					chsHeadBodyLay2.setVisibility(View.INVISIBLE);
+					changebody.setBackgroundResource(R.drawable.picedit_toolbar_btn_changebody_nor);
 					gifBody.restartGifAnimation();
 				}
 			}
@@ -717,6 +738,8 @@ public class PicEditActivity extends Activity implements OnClickListener {
 			final int  num = i*layer2num+1;
 			//2、初始化自身的图片
 			final RelativeLayout picLayout = (RelativeLayout) getLayoutInflater().inflate(R.layout.simpleitem, null);
+			picLayout.setLayoutParams(new ViewGroup.LayoutParams((int)(devWid/4.5), (int)(devWid/4.5)));
+			picLayout.setBackgroundResource(R.drawable.picedit_class_select);
 			final ImageView siv = (ImageView) picLayout.findViewById(R.id.img);
 			//picLayout.setId(i);
 			//3、为自身加入点击事件
@@ -734,7 +757,7 @@ public class PicEditActivity extends Activity implements OnClickListener {
 						cancelLayer1BodyChs();
 					}
 					cancelLayer2ChsState();
-					picLayout.setBackgroundResource(R.color.title_blue);
+					picLayout.setBackgroundResource(R.drawable.picedit_selected);
 					chsHeadBodyLay2.setVisibility(View.VISIBLE);
 				}
 			});
@@ -756,7 +779,7 @@ public class PicEditActivity extends Activity implements OnClickListener {
 				mainLayoutHead.addView(picLayout,i);
 			} else if(s.equals(AppConstantS.BODYNAME)) {
 				siv.setImageBitmap(Util.getImageFromAssetFile(context,
-							AppConstantS.BODYCHSBTN_FILENAME,AppConstantS.BODYNAME + num + AppConstantS.PNG_ENDNAME));
+							AppConstantS.BODYNAME+num,"class" + AppConstantS.PNG_ENDNAME));
 				mainLayoutBody.addView(picLayout,i);
 			}
 		}
@@ -770,7 +793,7 @@ public class PicEditActivity extends Activity implements OnClickListener {
 					(PicEditActivity.this, "headchsbtn", "head" + ((Integer)lay2Ivs.get(i).getTag())
 						+ AppConstantS.PNG_ENDNAME));
 			} else {
-				lay2Ivs.get(i).setImageBitmap(Util.getImageFromAssetFile(PicEditActivity.this, "bodychsbtn", "body" + ((Integer)lay2Ivs.get(i).getTag()) + ".png"));
+				lay2Ivs.get(i).setImageBitmap(Util.getImageFromAssetFile(PicEditActivity.this, AppConstantS.BODYNAME + ((Integer)lay2Ivs.get(i).getTag()), "color1" + ".png"));
 			}
 		}
 	}
@@ -805,7 +828,7 @@ public class PicEditActivity extends Activity implements OnClickListener {
 					}
 					//最后，之前的选中状态清空，本次选中按钮变色
 					cancelLayer2ChsState();
-					v.setBackgroundResource(R.color.title_blue);
+					v.setBackgroundResource(R.drawable.picedit_selected);
 				}
 			});
 		}	
@@ -820,13 +843,13 @@ public class PicEditActivity extends Activity implements OnClickListener {
 	//取消头部第一层菜单的所有选中状态
 	private void cancelLayer1HeadChs() {
 		for(int i=0;i<mainLayoutHead.getChildCount();i++) {
-			mainLayoutHead.getChildAt(i).setBackgroundResource(0);
+			mainLayoutHead.getChildAt(i).setBackgroundResource(R.drawable.picedit_class_select);
 		}
 	}
 	//取消头部第一层菜单的所有选中状态
 	private void cancelLayer1BodyChs() {
 		for(int i=0;i<mainLayoutBody.getChildCount();i++) {
-			mainLayoutBody.getChildAt(i).setBackgroundResource(0);
+			mainLayoutBody.getChildAt(i).setBackgroundResource(R.drawable.picedit_class_select);
 		}
 	}
 	
@@ -943,7 +966,7 @@ public class PicEditActivity extends Activity implements OnClickListener {
 			tp.setShadowLayer(5, 0, 0, Color.BLACK);
 		
 			StaticLayout layout = new StaticLayout(gifShowWord.getText().toString(), tp, AppConstantS.FINAL_GIF_HEIGHT, Alignment.ALIGN_CENTER, 1.0F, 0.0F, true);
-			canvas.translate(0, AppConstantS.FINAL_GIF_HEIGHT-50);
+			canvas.translate(0, AppConstantS.FINAL_GIF_HEIGHT-layout.getHeight()-20);
 			
 	
 			layout.draw(canvas);
@@ -1066,7 +1089,22 @@ public class PicEditActivity extends Activity implements OnClickListener {
 	protected void onStop() {
 		super.onStop();
 	}
-
+	
+	@Override
+	public void onConfigurationChanged(Configuration newConfig) {  
+        // TODO Auto-generated method stub  
+        Log.i("UserInfoActivity", "onConfigurationChanged");  
+        if(newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE) {  
+            Log.i("UserInfoActivity", "横屏");  
+            Configuration o = newConfig;  
+            o.orientation = Configuration.ORIENTATION_PORTRAIT;  
+            newConfig.setTo(o);  
+        } else if(newConfig.orientation == Configuration.ORIENTATION_PORTRAIT) {  
+            Log.i("UserInfoActivity", "竖屏");  
+        }  
+        super.onConfigurationChanged(newConfig);  
+    }
+	
 	class MakeGifTask extends AsyncTask<Void, Void, Boolean> {
 		private boolean flag = true;
 		@Override
