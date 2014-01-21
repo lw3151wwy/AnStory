@@ -40,7 +40,7 @@ public class AnimatedGifEncoder1 {
 		this.closeStream = false;
 		this.firstFrame = true;
 		this.sizeSet = false;
-		this.sample = 20; 
+		this.sample = 10; 
 	}
 
 	public boolean addFrame(Bitmap paramBitmap) {

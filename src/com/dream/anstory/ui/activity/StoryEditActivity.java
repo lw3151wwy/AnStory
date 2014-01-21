@@ -20,7 +20,9 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.text.StaticLayout;
 import android.text.TextPaint;
+import android.text.Layout.Alignment;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.KeyEvent;
@@ -484,8 +486,14 @@ public class StoryEditActivity extends Activity{
 				tp.setTextSize(30);
 				tp.setTypeface(mFace);
 				tp.setShadowLayer(5, 0, 0, Color.BLACK);
-				tp.setTextAlign(Align.CENTER);
-				canvas.drawText(Util.gmList.get(i).getBotWord(), AppConstantS.FINAL_GIF_WIDTH / 2, titleHeight+320 + AppConstantS.FINAL_GIF_HEIGHT * i, tp);
+				//tp.setTextAlign(Align.CENTER);
+				//
+				StaticLayout layout = new StaticLayout(Util.gmList.get(i).getBotWord(), tp, AppConstantS.FINAL_GIF_WIDTH, Alignment.ALIGN_CENTER, 1.0F, 0.0F, true);
+				canvas.translate(0, titleHeight + AppConstantS.FINAL_GIF_HEIGHT * (i+1)-layout.getHeight()-20);
+				layout.draw(canvas);
+				canvas.translate(0, -(titleHeight + AppConstantS.FINAL_GIF_HEIGHT * (i+1)-layout.getHeight()-20));
+				//
+				//canvas.drawText(Util.gmList.get(i).getBotWord(), AppConstantS.FINAL_GIF_WIDTH / 2, titleHeight+320 + AppConstantS.FINAL_GIF_HEIGHT * i, tp);
 			}
 			
 			//»­ÉÏ±ß¿ò

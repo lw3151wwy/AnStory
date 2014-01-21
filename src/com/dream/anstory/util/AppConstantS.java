@@ -28,8 +28,10 @@ public interface AppConstantS {
 	//读取ASSET的文件名前缀和后缀  如head3.gif ,body5.png等
 	public static final String BODYNAME = "body";
 	public static final String HEADNAME = "head";
+	public static final String FRAMENAME = "frame";
 	public static final String HEADCHSBTN_FILENAME = "headchsbtn";
 	public static final String BODYCHSBTN_FILENAME = "bodychsbtn";
+	public static final String FRAMECHSBTN_FILENAME = "framechsbtn";
 	public static final String GIF_ENDNAME=".gif";
 	public static final String JPG_ENDNAME=".jpg";
 	public static final String PNG_ENDNAME=".png";

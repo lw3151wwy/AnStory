@@ -83,6 +83,8 @@ public class PicEditActivity extends Activity implements OnClickListener {
 	private final int headLayer1num = 5;
 	//身子的一级菜单栏容量
 	private final int bodyLayer1num = 7;
+	//身子的一级菜单栏容量
+	private final int frameLayer1num = 2;
 	//头部和身子二级菜单容量，目前都是4
 	private final int layer2num = 4;
 	
@@ -97,11 +99,6 @@ public class PicEditActivity extends Activity implements OnClickListener {
 	GestureDetector gestureMyIvDetector;
 	// 用于线程控制
 
-//	public static final int BODY_CHANGEPRE = 1;
-//	public static final int BODY_CHANGENEXT = 2;
-//	public static final int HEAD_CHANGEPRE = 3;
-//	public static final int HEAD_CHANGENEXT = 4;
-//	public static final int WORD_CHANGE = 5;
 	public static final int MATCH_A_FRAME = 6; //拼接完一帧图片，HandlerMsg
 	//handler屏幕晃动MSG
 	public static final int SENSOR_SHAKE = 10;
@@ -129,10 +126,17 @@ public class PicEditActivity extends Activity implements OnClickListener {
 	private Bitmap bodyBitm;
 	private Button changehead;	//选择头部按钮
 	private Button changebody;	//选择身子按钮
-	LinearLayout mainLayoutHead;	//头部1级菜单父容器
-	HorizontalScrollView chsHeadHsv;//头部的1级菜单子容器
-	LinearLayout mainLayoutBody;	//身子1级菜单父容器
-	HorizontalScrollView chsBodyHsv;//身子的1级菜单子容器
+	private Button changeframe;	//选择边框按钮
+	
+	HorizontalScrollView chsHeadHsv;//头部的1级菜单父容器
+	LinearLayout chsHeadLay;	//头部1级菜单子容器
+	
+	HorizontalScrollView chsBodyHsv;//身子的1级菜单父容器
+	LinearLayout chsBodyLay;	//身子1级菜单子容器
+	
+	HorizontalScrollView chsFrameHsv;//边框的1级菜单父容器
+	LinearLayout chsFrameLay;	//边框1级菜单子容器
+	
 	LinearLayout chsHeadBodyLay2;	//选择头部和身子2级菜单父容器
 	ArrayList<ImageView> lay2Ivs;	//存放当前显示的头部或身子的2级菜单图片
 	
@@ -257,8 +261,8 @@ public class PicEditActivity extends Activity implements OnClickListener {
 			Util.curShowingBody = inibody;
 			if (isEdit){
 				//以记忆参数初始化移动与缩放
-				int widthini = devWid;
-				int heightini = devWid*AppConstantS.FINAL_GIF_HEIGHT/AppConstantS.FINAL_GIF_WIDTH;
+				int widthini = devWid-devWid/10;
+				int heightini = (devWid-devWid/10)*AppConstantS.FINAL_GIF_HEIGHT/AppConstantS.FINAL_GIF_WIDTH;
 				//Log.v(TAG,"ini width height"+right+bottom);
 				RelativeLayout.LayoutParams setLayoutParams = new LayoutParams((int) widthini, (int) heightini);
 				float inileft = Util.gmList.get(curGifNumini).getLeft();
@@ -582,14 +586,19 @@ public class PicEditActivity extends Activity implements OnClickListener {
 				mgTask.cancel(true);
 			}
 		});
+		//背景 
+
 		// 选择头部和身子的按钮
 		changehead = (Button) this.findViewById(R.id.changehead);
 		changebody = (Button) this.findViewById(R.id.changebody);
+		changeframe = (Button) this.findViewById(R.id.changeframe);
 		//头和身子1级菜单 ，因为SCROLLVIEW里无法放多个子类，因此先放一个LINEARLAYOUT再放子类
 		chsHeadHsv= (HorizontalScrollView)this.findViewById(R.id.head_chs_list);
 		chsBodyHsv= (HorizontalScrollView)this.findViewById(R.id.body_chs_list);
-		mainLayoutHead = (LinearLayout)findViewById(R.id.headchslayout);
-		mainLayoutBody = (LinearLayout)this.findViewById(R.id.bodychslayout);
+		chsFrameHsv = (HorizontalScrollView)this.findViewById(R.id.frame_chs_list);
+		chsHeadLay = (LinearLayout)findViewById(R.id.headchslayout);
+		chsBodyLay = (LinearLayout)this.findViewById(R.id.bodychslayout);
+		chsFrameLay = (LinearLayout)this.findViewById(R.id.framechslayout);
 		//头部和身子的2级菜单
 		chsHeadBodyLay2 = (LinearLayout) this.findViewById(R.id.headbody_chs_lay2);
 		chsHeadBodyLay2.setVisibility(View.INVISIBLE);
@@ -611,12 +620,15 @@ public class PicEditActivity extends Activity implements OnClickListener {
 		// 以两个按钮ID记录两个按钮的开关属性，初始默认关闭，点击后开启并改变按钮ID
 		changehead.setTag(BUTTON_CLOSE);
 		changebody.setTag(BUTTON_CLOSE);
+		changeframe.setTag(BUTTON_CLOSE);
 		// 头身按钮点击初始化
 		initChangeHeadBtn();
 		initChangeBodyBtn();
+		initChangeFrameBtn();
 		// 1级头身菜单初始化
 		initHeadBodyLayer1Btn(AppConstantS.HEADNAME,headLayer1num);
 		initHeadBodyLayer1Btn(AppConstantS.BODYNAME,bodyLayer1num);
+		initHeadBodyLayer1Btn(AppConstantS.FRAMENAME,frameLayer1num);
 		// 2级头身菜单初始化
 		initHeadBodyLayer2Btn();
 		
@@ -691,7 +703,41 @@ public class PicEditActivity extends Activity implements OnClickListener {
 			}
 		});
 	}
-	
+	//边框菜单初始化
+	private void initChangeFrameBtn() {
+		// 身子菜单按钮的事件
+		changeframe.setOnClickListener(new OnClickListener() {
+			public void onClick(View v) {
+				if ((Integer) v.getTag() == BUTTON_CLOSE) {
+					// 当点击身子按钮操作为：关闭--〉打开
+					// 1、改变身子按钮TAG属性为打开
+					// 2、 显示第一行身子菜单
+					changeframe.setBackgroundResource(R.drawable.picedit_toolbar_btn_changebody_pressed);
+					changeframe.setTag(BUTTON_OPEN);
+					chsFrameHsv.setVisibility(View.VISIBLE);
+					
+					// 3、 如果此时头或身子部菜单为打开状态
+					closeChangeBody();
+					closeChangeHead();
+					// 4、清除之前身子相关按钮的选中状态
+					//cancelLayer1BodyChs();
+					//cancelLayer2ChsState();
+				} else {
+					// 当点击身子按钮操作为：打开--〉关闭
+					// １、点击后，关闭两行身子菜单
+					// ２、设置身子按钮ＴＡＧ属性为关闭
+					// ３、重启身子的动画
+					changeframe.setTag(BUTTON_CLOSE);
+					chsFrameHsv.setVisibility(View.INVISIBLE);
+					chsHeadBodyLay2.setVisibility(View.INVISIBLE);
+					changeframe.setBackgroundResource(R.drawable.picedit_toolbar_btn_changebody_nor);
+					gifBody.restartGifAnimation();
+				}
+			}
+		});
+	}
+		
+		
 	//身子按钮初始化
 	private void initChangeBodyBtn() {
 		//身子菜单按钮的事件
@@ -704,16 +750,11 @@ public class PicEditActivity extends Activity implements OnClickListener {
 					changebody.setBackgroundResource(R.drawable.picedit_toolbar_btn_changebody_pressed);
 					changebody.setTag(BUTTON_OPEN);
 					chsBodyHsv.setVisibility(View.VISIBLE);
-					// 3、 如果此时头部菜单为打开状态
-					// （１）设置头部按钮ＴＡＧ属性为关闭
-					// （２）隐藏头部的两个菜单
-					if ((Integer) changehead.getTag() == BUTTON_OPEN) {
-						changehead.setTag(BUTTON_CLOSE);
-						chsHeadHsv.setVisibility(View.INVISIBLE);
-						chsHeadBodyLay2.setVisibility(View.INVISIBLE);
-						changehead.setBackgroundResource(R.drawable.picedit_toolbar_btn_changehead_nor);
-					}
-					// 4、清除之前身子相关按钮的选中状态
+					
+					// 3、 如果此时头和身子菜单为打开状态
+					closeChangeHead();
+					
+					// 4、清除之前头和身子相关按钮的选中状态
 					cancelLayer1BodyChs();
 					cancelLayer2ChsState();
 				} else {
@@ -730,15 +771,40 @@ public class PicEditActivity extends Activity implements OnClickListener {
 			}
 		});
 	}
+	
+	private void closeChangeHead() {
+		// 3、 如果此时头部菜单为打开状态
+		// （１）设置头部按钮ＴＡＧ属性为关闭
+		// （２）隐藏头部的两个菜单
+		if ((Integer) changehead.getTag() == BUTTON_OPEN) {
+			changehead.setTag(BUTTON_CLOSE);
+			chsHeadHsv.setVisibility(View.INVISIBLE);
+			chsHeadBodyLay2.setVisibility(View.INVISIBLE);
+			changehead.setBackgroundResource(R.drawable.picedit_toolbar_btn_changehead_nor);
+		}
+	}
+	
+	private void closeChangeBody() {
+		// 3、 如果此时头部菜单为打开状态
+		// （１）设置头部按钮ＴＡＧ属性为关闭
+		// （２）隐藏头部的两个菜单
+		if ((Integer) changehead.getTag() == BUTTON_OPEN) {
+			changehead.setTag(BUTTON_CLOSE);
+			chsHeadHsv.setVisibility(View.INVISIBLE);
+			chsHeadBodyLay2.setVisibility(View.INVISIBLE);
+			changehead.setBackgroundResource(R.drawable.picedit_toolbar_btn_changehead_nor);
+		}
+	}
+	
 	//初始化头和身子第一层按钮和对应点击事件,count为菜单包含的选项数
-	private void initHeadBodyLayer1Btn(final String s,int count) {
+	private void initHeadBodyLayer1Btn(final String s,int layer1num) {
 		//遍历初始化1级菜单的每一个按钮
-		for(int i=0;i<count;i++) {
+		for(int i=0;i<layer1num;i++) {
 			//1、计算其对应的图片编号
 			final int  num = i*layer2num+1;
 			//2、初始化自身的图片
 			final RelativeLayout picLayout = (RelativeLayout) getLayoutInflater().inflate(R.layout.simpleitem, null);
-			picLayout.setLayoutParams(new ViewGroup.LayoutParams((int)(devWid/4.5), (int)(devWid/4.5)));
+			picLayout.setLayoutParams(new RelativeLayout.LayoutParams((int)(devWid/4.5), (int)(devWid/4.5)));
 			picLayout.setBackgroundResource(R.drawable.picedit_class_select);
 			final ImageView siv = (ImageView) picLayout.findViewById(R.id.img);
 			//picLayout.setId(i);
@@ -770,20 +836,26 @@ public class PicEditActivity extends Activity implements OnClickListener {
 					return false;
 				}
 			});
+			
 			//5、判断是头部菜单和是身子菜单，设置自身对应编号的图片，将自身ADDVIEW进1级菜单的相应位置
 			if(s.equals(AppConstantS.HEADNAME)) {
 				System.out.println("width"+Util.getImageFromAssetFile(context,
 						AppConstantS.HEADCHSBTN_FILENAME,AppConstantS.HEADNAME + num + AppConstantS.PNG_ENDNAME).getWidth());
 				siv.setImageBitmap(Util.getImageFromAssetFile(context,
 					AppConstantS.HEADCHSBTN_FILENAME,AppConstantS.HEADNAME + num + AppConstantS.PNG_ENDNAME));
-				mainLayoutHead.addView(picLayout,i);
+				chsHeadLay.addView(picLayout,i);
 			} else if(s.equals(AppConstantS.BODYNAME)) {
 				siv.setImageBitmap(Util.getImageFromAssetFile(context,
 							AppConstantS.BODYNAME+num,"class" + AppConstantS.PNG_ENDNAME));
-				mainLayoutBody.addView(picLayout,i);
+				chsBodyLay.addView(picLayout,i);
+			} else if(s.equals(AppConstantS.FRAMENAME)) {
+				siv.setImageBitmap(Util.getImageFromAssetFile(context,
+						AppConstantS.FRAMENAME,AppConstantS.FRAMENAME+num + AppConstantS.PNG_ENDNAME));
+				chsFrameLay.addView(picLayout,i);
 			}
 		}
 	}
+
 	//预先计算好头身的二级菜单的图片，存放在链表中
 	private void setHeadAndBodyLayer2(final int num) {
 		for (int i = 0; i < 4; i++) {
@@ -809,7 +881,6 @@ public class PicEditActivity extends Activity implements OnClickListener {
 						//2、记录头的编号
 						//3、记录头的每一帧，其实头只有一帧（此处后期进行结构修改）
 						//4、恢复身子的动态显示
-						
 						gifHead.setImageBitmap(Util.getImageFromAssetFile(context, "head", "head" + ((Integer)v.getTag()) + ".png"));
 						Util.curShowingHead = ((Integer)v.getTag());
 					
@@ -842,14 +913,14 @@ public class PicEditActivity extends Activity implements OnClickListener {
 	}
 	//取消头部第一层菜单的所有选中状态
 	private void cancelLayer1HeadChs() {
-		for(int i=0;i<mainLayoutHead.getChildCount();i++) {
-			mainLayoutHead.getChildAt(i).setBackgroundResource(R.drawable.picedit_class_select);
+		for(int i=0;i<chsHeadLay.getChildCount();i++) {
+			chsHeadLay.getChildAt(i).setBackgroundResource(R.drawable.picedit_class_select);
 		}
 	}
 	//取消头部第一层菜单的所有选中状态
 	private void cancelLayer1BodyChs() {
-		for(int i=0;i<mainLayoutBody.getChildCount();i++) {
-			mainLayoutBody.getChildAt(i).setBackgroundResource(R.drawable.picedit_class_select);
+		for(int i=0;i<chsBodyLay.getChildCount();i++) {
+			chsBodyLay.getChildAt(i).setBackgroundResource(R.drawable.picedit_class_select);
 		}
 	}
 	
@@ -965,7 +1036,7 @@ public class PicEditActivity extends Activity implements OnClickListener {
 			//tp.setFakeBoldText(true);
 			tp.setShadowLayer(5, 0, 0, Color.BLACK);
 		
-			StaticLayout layout = new StaticLayout(gifShowWord.getText().toString(), tp, AppConstantS.FINAL_GIF_HEIGHT, Alignment.ALIGN_CENTER, 1.0F, 0.0F, true);
+			StaticLayout layout = new StaticLayout(gifShowWord.getText().toString(), tp, AppConstantS.FINAL_GIF_WIDTH, Alignment.ALIGN_CENTER, 1.0F, 0.0F, true);
 			canvas.translate(0, AppConstantS.FINAL_GIF_HEIGHT-layout.getHeight()-20);
 			
 	

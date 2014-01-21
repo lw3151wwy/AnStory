@@ -27,13 +27,23 @@
             android:layout_height="wrap_content"            
             android:background="@drawable/picedit_toolbar_btn_changehead_nor"
             android:layout_weight="1"/>
+        
         <!-- 更换动作-->
         <Button
             android:id="@+id/changebody"
             android:layout_width="0dp"
             android:layout_height="wrap_content"                        
             android:background="@drawable/picedit_toolbar_btn_changebody_nor"
-            android:layout_weight="1"/>             
+            android:layout_weight="1"/>     
+            
+         <!-- 更换形象-->
+        <Button
+            android:id="@+id/changeframe"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"            
+            android:background="@drawable/picedit_toolbar_btn_changehead_nor"
+            android:layout_weight="1"/>
+        
 		<!-- 拍摄背景 -->                
         <Button
             android:id="@+id/camera"
@@ -143,8 +153,6 @@
     </RelativeLayout>
 
 	<!-- 选择头像 -->
-  
-
     <HorizontalScrollView
 	    android:id="@+id/head_chs_list"
 	    android:layout_width="fill_parent"
@@ -161,7 +169,7 @@
 			android:orientation="horizontal">
 		</LinearLayout>				
 	</HorizontalScrollView>
-	
+	<!-- 选择身子 -->
     <HorizontalScrollView
 	    android:id="@+id/body_chs_list"
 	    android:layout_width="fill_parent"
@@ -175,6 +183,24 @@
 	        android:layout_width="wrap_content"
 	    	android:layout_height="wrap_content"
 			android:id="@+id/bodychslayout"
+			android:orientation="horizontal">
+		</LinearLayout>				
+	</HorizontalScrollView>
+    
+    <!-- 选择边框 -->
+    <HorizontalScrollView
+	    android:id="@+id/frame_chs_list"
+	    android:layout_width="fill_parent"
+    	android:layout_height="wrap_content"
+    	android:layout_centerHorizontal="true"
+    	android:layout_above="@id/picedit_toolbar"
+    	android:scrollbars="none"
+    	android:background="#fdb67e"
+    	android:visibility="invisible">
+	    <LinearLayout 
+	        android:layout_width="wrap_content"
+	    	android:layout_height="wrap_content"
+			android:id="@+id/framechslayout"
 			android:orientation="horizontal">
 		</LinearLayout>				
 	</HorizontalScrollView>
