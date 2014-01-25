@@ -82,9 +82,9 @@ public class PicEditActivity extends Activity implements OnClickListener {
 	//头部的一级菜单栏容量
 	private final int headLayer1num = 5;
 	//身子的一级菜单栏容量
-	private final int bodyLayer1num = 7;
-	//身子的一级菜单栏容量
-	private final int frameLayer1num = 2;
+	private final int bodyLayer1num = 9;
+	//背景的一级菜单栏容量
+	private final int frameLayer1num = 5;
 	//头部和身子二级菜单容量，目前都是4
 	private final int layer2num = 4;
 	
@@ -98,7 +98,6 @@ public class PicEditActivity extends Activity implements OnClickListener {
 	// 手势类
 	GestureDetector gestureMyIvDetector;
 	// 用于线程控制
-
 	public static final int MATCH_A_FRAME = 6; //拼接完一帧图片，HandlerMsg
 	//handler屏幕晃动MSG
 	public static final int SENSOR_SHAKE = 10;
@@ -798,6 +797,7 @@ public class PicEditActivity extends Activity implements OnClickListener {
 	
 	//初始化头和身子第一层按钮和对应点击事件,count为菜单包含的选项数
 	private void initHeadBodyLayer1Btn(final String s,int layer1num) {
+		System.out.println("string"+s);
 		//遍历初始化1级菜单的每一个按钮
 		for(int i=0;i<layer1num;i++) {
 			//1、计算其对应的图片编号
@@ -815,16 +815,31 @@ public class PicEditActivity extends Activity implements OnClickListener {
 			//  （4）、选中按钮变色
 			siv.setOnClickListener(new OnClickListener() {	
 				public void onClick(View v) {
-					setHeadAndBodyLayer2(num);
 					if(s.equals(AppConstantS.HEADNAME)) {
+						setHeadAndBodyLayer2(num);
 						cancelLayer1HeadChs();
+						chsHeadBodyLay2.setVisibility(View.VISIBLE);
 					}
 					if(s.equals(AppConstantS.BODYNAME)) {
+						setHeadAndBodyLayer2(num);
 						cancelLayer1BodyChs();
+						chsHeadBodyLay2.setVisibility(View.VISIBLE);
+					}
+					if(s.equals(AppConstantS.FRAMENAME)) {
+						cancelLayer1BodyChs();
+						cancelLayer1HeadChs();
+						cancelLayer2ChsState();
+						
+						if(gifBg!=null){
+							Util.background = Util.getImageFromAssetFile(context,
+									AppConstantS.FRAMENAME,AppConstantS.FRAMENAME+ (((num-1)/layer2num)+1) + AppConstantS.PNG_ENDNAME);
+							gifBg.setImageBitmap(Util.background);
+						}
+						return;
 					}
 					cancelLayer2ChsState();
 					picLayout.setBackgroundResource(R.drawable.picedit_selected);
-					chsHeadBodyLay2.setVisibility(View.VISIBLE);
+				
 				}
 			});
 			//4、加入触摸事件，当手指按下１级菜单时，动画停止播放，以防滑动１级菜单的时候卡
@@ -850,7 +865,7 @@ public class PicEditActivity extends Activity implements OnClickListener {
 				chsBodyLay.addView(picLayout,i);
 			} else if(s.equals(AppConstantS.FRAMENAME)) {
 				siv.setImageBitmap(Util.getImageFromAssetFile(context,
-						AppConstantS.FRAMENAME,AppConstantS.FRAMENAME+num + AppConstantS.PNG_ENDNAME));
+						AppConstantS.FRAMENAME,AppConstantS.FRAMENAME+(i+1) + AppConstantS.PNG_ENDNAME));
 				chsFrameLay.addView(picLayout,i);
 			}
 		}
