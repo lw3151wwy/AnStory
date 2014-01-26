@@ -30,11 +30,16 @@ import com.weibo.sdk.android.WeiboDialogError;
 import com.weibo.sdk.android.WeiboException;
 import com.weibo.sdk.android.sso.SsoHandler;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.ProgressDialog;
+import android.app.AlertDialog.Builder;
+import android.content.ComponentName;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.net.ConnectivityManager;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.KeyEvent;
@@ -160,52 +165,56 @@ public class PicShareActivity extends Activity {
 		Button btnShare2Weixin = (Button) findViewById(R.id.share2weixin);
 		btnShare2Weixin.setOnClickListener(new OnClickListener() {
 			public void onClick(View v) {
-				if (showGif.animationRun){
-					Log.v(TAG, "销毁"+showGif.animationRun);
-					showGif.pauseGifAnimation();
-					showGif.destroy();
-					Log.v(TAG, "销毁"+showGif.animationRun);
+				//先检测网络状态
+				if(getNetWorkStatus()) { 
+					MobclickAgent.onEvent(PicShareActivity.this, AppConstantS.UMENG_SHARE_TO_WEIXIN);
+					if (showGif.animationRun){
+						showGif.pauseGifAnimation();
+						showGif.destroy();
+					}
+					final String path = Util.getAppStorePath() + File.separator + AppConstantS.GIF_STORENAME;
+					WXEmojiObject emoji = new WXEmojiObject();
+					emoji.emojiPath = path;
+	
+					WXMediaMessage msg = new WXMediaMessage(emoji);
+					msg.title = "Emoji Title";
+					msg.description = "Emoji Description";
+	
+					Bitmap bmp = BitmapFactory.decodeFile(path);
+					Bitmap thumbBmp = Bitmap.createScaledBitmap(bmp, THUMB_SIZE, THUMB_SIZE, true);
+					bmp.recycle();
+					msg.thumbData = Util.bmpToByteArray(thumbBmp, true);
+					SendMessageToWX.Req req = new SendMessageToWX.Req();
+					req.transaction = buildTransaction("emoji");
+					req.message = msg;
+					req.scene = SendMessageToWX.Req.WXSceneSession;
+					mmAPI.sendReq(req);
 				}
-				final String path = Util.getAppStorePath() + File.separator + AppConstantS.GIF_STORENAME;
-				WXEmojiObject emoji = new WXEmojiObject();
-				emoji.emojiPath = path;
-
-				WXMediaMessage msg = new WXMediaMessage(emoji);
-				msg.title = "Emoji Title";
-				msg.description = "Emoji Description";
-
-				Bitmap bmp = BitmapFactory.decodeFile(path);
-				Bitmap thumbBmp = Bitmap.createScaledBitmap(bmp, THUMB_SIZE, THUMB_SIZE, true);
-				bmp.recycle();
-				msg.thumbData = Util.bmpToByteArray(thumbBmp, true);
-				SendMessageToWX.Req req = new SendMessageToWX.Req();
-				req.transaction = buildTransaction("emoji");
-				req.message = msg;
-				req.scene = SendMessageToWX.Req.WXSceneSession;
-				mmAPI.sendReq(req);
 			}
 		});
 
-		// 新浪微博分享
+		//新浪微博分享
 		Button btnShare2SinaWeibo = (Button) findViewById(R.id.share2sinaweibo);
 		btnShare2SinaWeibo.setOnClickListener(new OnClickListener() {
 			public void onClick(View v) {
-				if (showGif.animationRun){
-					Log.v(TAG, "销毁"+showGif.animationRun);
-					showGif.pauseGifAnimation();
-					showGif.destroy();
-					Log.v(TAG, "销毁"+showGif.animationRun);
-				}
-				mWeibo = Weibo.getInstance(AppConstantS.APP_KEY,
-						AppConstantS.REDIRECT_URL);
-				mSsoHandler = new SsoHandler(PicShareActivity.this, mWeibo);
-				mSsoHandler.authorize(new AuthDialogListener());
-				try {
-					Class sso = Class
-							.forName("com.weibo.sdk.android.sso.SsoHandler");
-				} catch (ClassNotFoundException e) {
-					// e.printStackTrace();
-					Log.i(TAG,"com.weibo.sdk.android.sso.SsoHandler not found");
+				//先检测网络状态
+				if(getNetWorkStatus()) { 
+					MobclickAgent.onEvent(PicShareActivity.this, AppConstantS.UMENG_SHARE_TO_WEIBO);
+					if (showGif.animationRun){
+						showGif.pauseGifAnimation();
+						showGif.destroy();
+					}
+					mWeibo = Weibo.getInstance(AppConstantS.APP_KEY,
+							AppConstantS.REDIRECT_URL);
+					mSsoHandler = new SsoHandler(PicShareActivity.this, mWeibo);
+					mSsoHandler.authorize(new AuthDialogListener());
+					try {
+						Class sso = Class
+								.forName("com.weibo.sdk.android.sso.SsoHandler");
+					} catch (ClassNotFoundException e) {
+						// e.printStackTrace();
+						Log.i(TAG,"com.weibo.sdk.android.sso.SsoHandler not found");
+					}
 				}
 			}
 		});
@@ -213,51 +222,95 @@ public class PicShareActivity extends Activity {
 		Button btnShare2Renren = (Button) findViewById(R.id.share2renren);
 		btnShare2Renren.setOnClickListener(new OnClickListener() {	
 			public void onClick(View v) {
-				if (showGif.animationRun){
-					Log.v(TAG, "销毁"+showGif.animationRun);
-					showGif.pauseGifAnimation();
-					showGif.destroy();
-					Log.v(TAG, "销毁"+showGif.animationRun);
-				}
-				if(rennClient==null) {
-					rennClient = RennClient.getInstance(PicShareActivity.this);
-				}
-				if (!rennClient.isLogin()) {
-					System.out.println("login"+rennClient.isLogin());
-					rennClient.init(APP_ID, API_KEY, SECRET_KEY);
-					rennClient
-					.setScope("read_user_blog read_user_photo read_user_status read_user_album "
-							+ "read_user_comment read_user_share publish_blog publish_share "
-							+ "send_notification photo_upload status_update create_album "
-							+ "publish_comment publish_feed");
-					rennClient.setTokenType("bearer");
-				
-					rennClient.setLoginListener(new LoginListener() {
-						public void onLoginSuccess() {
-							System.out.println("认证成功");
-							Toast.makeText(PicShareActivity.this, "认证成功",
-									Toast.LENGTH_SHORT).show();
-							uploadPic2Renren();
-						}
-						public void onLoginCanceled() {
-							Toast.makeText(PicShareActivity.this, "登录失败",
-									Toast.LENGTH_SHORT).show();
-						}
-					});
-					rennClient.login(PicShareActivity.this);
-					System.out.println("beforeLogin.login"+rennClient.isLogin());
-					System.out.println("afterLogin.login"+rennClient.isLogin());
-				} else {
-					//直接分享图片
-					uploadPic2Renren();
-					Toast.makeText(PicShareActivity.this, "已经认证",
-							Toast.LENGTH_SHORT).show();
+				//先检测网络状态
+				if(getNetWorkStatus()) {
+					MobclickAgent.onEvent(PicShareActivity.this, AppConstantS.UMENG_SHARE_TO_RENREN);
+					if (showGif.animationRun){
+						showGif.pauseGifAnimation();
+						showGif.destroy();
+					}
+					
+					if(rennClient==null) {
+						rennClient = RennClient.getInstance(PicShareActivity.this);
+					}
+			
+					if (!rennClient.isLogin()) {
+						rennClient.init(APP_ID, API_KEY, SECRET_KEY);
+						rennClient.setScope("read_user_blog read_user_photo read_user_status read_user_album "
+								+ "read_user_comment read_user_share publish_blog publish_share "
+								+ "send_notification photo_upload status_update create_album "
+								+ "publish_comment publish_feed");
+						rennClient.setTokenType("bearer");
+					
+						rennClient.setLoginListener(new LoginListener() {
+							public void onLoginSuccess() {
+								System.out.println("认证成功");
+								Toast.makeText(PicShareActivity.this, "认证成功",
+										Toast.LENGTH_SHORT).show();
+								uploadPic2Renren();
+							}
+							public void onLoginCanceled() {
+								Log.v(TAG,"用户已取消认证");
+							}
+						});
+						rennClient.login(PicShareActivity.this);
+					} else {
+						//直接分享图片
+						uploadPic2Renren();
+						Toast.makeText(PicShareActivity.this, "已经认证",
+								Toast.LENGTH_SHORT).show();
+					}
 				}
 			}
 		});
 	}
 
-	// 腾讯微博记录操作时间
+	
+	public void uploadPic2Renren() {
+		UploadPhotoParam param = new UploadPhotoParam();
+		
+		try {
+			String path = Util.getAppStorePath() +  File.separator+AppConstantS.GIF_STORENAME;
+			File picFile = new File(path);
+			param.setFile(picFile);
+			param.setDescription("#唠图# http://115.28.4.190/");
+		} catch (Exception e) {
+			Log.v(TAG,"人人上传照片时参数设置错误"+e.getMessage());
+		}
+		if (mProgressDialog == null) {
+			mProgressDialog = new ProgressDialog(PicShareActivity.this);
+			mProgressDialog.setCancelable(true);
+			mProgressDialog.setTitle("请等待");
+			mProgressDialog.setIcon(android.R.drawable.ic_dialog_info);
+			mProgressDialog.setMessage("正在上传gif图到人人网...");
+			mProgressDialog.show();
+		}
+		try {
+			rennClient.getRennService().sendAsynRequest(param, new CallBack() {
+				public void onSuccess(RennResponse response) {
+					//textView.setText(response.toString());
+					Toast.makeText(PicShareActivity.this, "上传照片到人人成功", Toast.LENGTH_SHORT).show();
+					if (mProgressDialog != null) {
+						mProgressDialog.dismiss();
+						mProgressDialog = null;
+					}
+				}
+
+				public void onFailed(String errorCode, String errorMessage) {
+					Toast.makeText(PicShareActivity.this, "上传照片到人人失败", Toast.LENGTH_SHORT).show();
+					if (mProgressDialog != null) {
+						mProgressDialog.dismiss();
+						mProgressDialog = null;
+					}
+				}
+			});
+		} catch (RennException e1) {
+			e1.printStackTrace();
+		}
+	}
+	
+	
+	// 新浪微博记录操作时间
 	private String buildTransaction(final String type) {
 		return (type == null) ? String.valueOf(System.currentTimeMillis())
 				: type + System.currentTimeMillis();
@@ -325,50 +378,7 @@ public class PicShareActivity extends Activity {
 	}
 	
 
-	public void uploadPic2Renren() {
-		UploadPhotoParam param = new UploadPhotoParam();
-		
-		try {
-			String path = Util.getAppStorePath() +  File.separator+AppConstantS.GIF_STORENAME;
-			File picFile = new File(path);
-			param.setFile(picFile);
-			param.setDescription("#唠图# http://115.28.4.190/");
-		} catch (Exception e) {
-			Log.v(TAG,"人人上传照片时参数设置错误"+e.getMessage());
-		}
-		if (mProgressDialog == null) {
-			mProgressDialog = new ProgressDialog(PicShareActivity.this);
-			mProgressDialog.setCancelable(true);
-			mProgressDialog.setTitle("请等待");
-			mProgressDialog.setIcon(android.R.drawable.ic_dialog_info);
-			mProgressDialog.setMessage("正在上传gif图到人人网...");
-			mProgressDialog.show();
-		}
-		try {
-			rennClient.getRennService().sendAsynRequest(param, new CallBack() {
-				public void onSuccess(RennResponse response) {
-					//textView.setText(response.toString());
-					Toast.makeText(PicShareActivity.this, "上传照片到人人成功", Toast.LENGTH_SHORT).show();
-					if (mProgressDialog != null) {
-						mProgressDialog.dismiss();
-						mProgressDialog = null;
-					}
-				}
-
-				public void onFailed(String errorCode, String errorMessage) {
-					//textView.setText(errorCode + ":" + errorMessage);
-					Toast.makeText(PicShareActivity.this, "上传照片到人人失败", Toast.LENGTH_SHORT).show();
-					if (mProgressDialog != null) {
-						mProgressDialog.dismiss();
-						mProgressDialog = null;
-					}
-				}
-			});
-		} catch (RennException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
-	}
+	
 	@Override
 	protected void onResume() {
 		super.onResume();
@@ -380,11 +390,20 @@ public class PicShareActivity extends Activity {
 		super.onPause();
 		MobclickAgent.onPause(this);
 	}
-
-//	private String getTransaction() {
-//		final GetMessageFromWX.Req req = new GetMessageFromWX.Req(bundle);
-//		return req.transaction;
-//	}
+	
+	private boolean getNetWorkStatus() {        
+		boolean netSataus = false;       
+		ConnectivityManager cwjManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);    
+		cwjManager.getActiveNetworkInfo();      
+		if (cwjManager.getActiveNetworkInfo() != null) {         
+			netSataus = cwjManager.getActiveNetworkInfo().isAvailable();      
+		} 
+		if (!netSataus) {
+			Toast.makeText(PicShareActivity.this, "请检查您的网络状态", Toast.LENGTH_LONG).show();
+		}
+		return netSataus;   
+	}
+	
 
 	public boolean onKeyDown(int keyCode, KeyEvent event) {
 		switch (keyCode) {

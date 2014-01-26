@@ -111,6 +111,8 @@ public class GifDecoder extends Thread {
 	private int resId = 0;
 	private String strFileName = null;
 	// 是否需要保存当前帧至util.body
+	// 当并从文件夹读取时（自动从文件夹读取gif图，setgifimage时，不需要保存身子的头的GIF图)！
+	// 防止出现gifbody里存的其实是整个的头和身子的图
 	boolean isSaveFrame = false;
 	// 解码第几帧
 	private int curFrameCount;
@@ -343,15 +345,12 @@ public class GifDecoder extends Thread {
 			//can get image here 
 			if(isSaveFrame) {
 				if (height == AppConstantS.FINAL_GIF_HEIGHT){
-					//for(int i=0;i<AppConstantS.GIF_FRAMECOUNT;i++) {
-					Util.body[Util.bodyNumber] = image;
-					Util.bodyNumber++;
-					System.out.println("UtilBODYi bei fu zhi"+Util.bodyNumber);
-					//}
-					if (Util.bodyNumber == AppConstantS.GIF_FRAMECOUNT) {
-						Util.bodyNumber = 0;
+					for(int i=0;i<AppConstantS.GIF_FRAMECOUNT;i++)
+					Util.body[curFrameCount] = image;
+					curFrameCount++;
+					if (curFrameCount == AppConstantS.GIF_FRAMECOUNT) {
+						curFrameCount = 0;
 						isSaveFrame = false;
-					
 					}
 				}
 			}

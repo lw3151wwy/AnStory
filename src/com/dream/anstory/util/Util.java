@@ -1,12 +1,9 @@
 package com.dream.anstory.util;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
@@ -18,21 +15,16 @@ import java.util.Date;
 
 import junit.framework.Assert;
 
-import android.R.integer;
 import android.content.Context;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
 import android.graphics.Matrix;
 import android.graphics.Bitmap.CompressFormat;
 import android.media.ExifInterface;
 import android.os.Environment;
 import android.util.Log;
-import android.view.MotionEvent;
 import android.view.View;
-import android.view.View.MeasureSpec;
-import android.view.View.OnTouchListener;
 import android.view.WindowManager;
 
 public class Util {
@@ -49,10 +41,8 @@ public class Util {
 	public static boolean isFirstEdit = true;
 	//记录gif图的配词
 	public static String gifEditWordStr = null;
-	
-	private static String mPhotoPath;//拍照后照片文件存放路径
+	public static 
 	WindowManager wm;
-	public static int bodyNumber= 0;
 	public static final String TAG = "ShowGif.Util";
 	public static byte[] bmpToByteArray(final Bitmap bmp, final boolean needRecycle) {
 		ByteArrayOutputStream output = new ByteArrayOutputStream();
@@ -60,7 +50,6 @@ public class Util {
 		if (needRecycle) {
 			bmp.recycle();
 		}
-		
 		byte[] result = output.toByteArray();
 		try {
 			output.close();
@@ -348,8 +337,28 @@ public class Util {
 	}
 	
 	
+	
 	//计算相机图片默认角度
-	public static int calPicAngle(String mPhotoPath) {
+	public static Bitmap calPicFromPath(String mPhotoPath) {
+	    
+        BitmapFactory.Options newOpts = new BitmapFactory.Options();  
+        //开始读入图片，此时把options.inJustDecodeBounds 设回true了  
+        newOpts.inJustDecodeBounds = true; 
+        Bitmap bitmap = BitmapFactory.decodeFile(mPhotoPath,newOpts);//此时返回bm为空 
+        
+        //按手机自带照相机的分别率进行压缩
+        newOpts.inJustDecodeBounds = false;  
+        int w = newOpts.outWidth;  
+        if((w/AppConstantS.FINAL_GIF_WIDTH) > 8) {
+        	 newOpts.inSampleSize = 8;
+        } else if((w/AppConstantS.FINAL_GIF_WIDTH) > 4){
+        	newOpts.inSampleSize = 4;
+        } else if((w/AppConstantS.FINAL_GIF_WIDTH) > 2){
+         	newOpts.inSampleSize = 2;
+        }
+        bitmap = BitmapFactory.decodeFile(mPhotoPath, newOpts); 
+		
+		
 		int digree = 0;
 		ExifInterface exif = null;
 		try {
@@ -377,14 +386,16 @@ public class Util {
 				break;
 			}
 		}
-		
-		return digree;
+		if (digree != 0) {
+			Matrix m = new Matrix();
+			m.postRotate(digree);
+			bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), m, true);
+		}
+		//把图片剪裁成320*350 ，先计算宽高比   宽w高h			
+		bitmap = Util.cutOut320350(bitmap,(float) bitmap.getWidth(),(float) bitmap.getHeight());
+		//压缩图片
+		bitmap = Util.zoomBitmap(bitmap,AppConstantS.FINAL_GIF_WIDTH,AppConstantS.FINAL_GIF_HEIGHT);
+		//返回该图片
+		return bitmap;
 	}
-	
-	public static Bitmap zoomAndResetPic() {
-		return background;
-		 //按手机自带照相机的分别率进行压缩
-       
-	}
-	
 }

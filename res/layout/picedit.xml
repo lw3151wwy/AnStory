@@ -20,6 +20,7 @@
         android:layout_alignParentBottom="true"
         android:layout_centerHorizontal="true"
         >
+        
         <!-- 更换形象-->
         <Button
             android:id="@+id/changehead"
@@ -36,7 +37,7 @@
             android:background="@drawable/picedit_toolbar_btn_changebody_nor"
             android:layout_weight="1"/>     
             
-         <!-- 更换形象-->
+        <!-- 更换背景-->
         <Button
             android:id="@+id/changeframe"
             android:layout_width="0dp"

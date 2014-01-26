@@ -41,7 +41,6 @@ public class MainActivity extends Activity {
 			public void onClick(View v) {
 				// TODO Auto-generated method stub
 				Intent in = new Intent(MainActivity.this,PicEditActivity.class);
-//				Intent in = new Intent(FirstActivity.this,PicShareActivity.class);
 				in.putExtra(AppConstantS.FROM_ACTIVITY_NAME, MainActivity.this.getClass().getName());
 				MainActivity.this.startActivity(in);
 				MainActivity.this.finish();

@@ -106,5 +106,4 @@
             android:value="ShowGif" >
         </meta-data>
     </application>
-    
 </manifest>

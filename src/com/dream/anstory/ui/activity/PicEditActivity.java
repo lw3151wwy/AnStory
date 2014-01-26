@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -162,7 +163,7 @@ public class PicEditActivity extends Activity implements OnClickListener {
 	private boolean isFromStoryMode = false;//是否来自故事模式 
 	private boolean isEdit = false;	//是否来自编辑模式 
 	private int curGifNum; 	//当前编辑的图片序号
-	
+	MakeGifTask mgTask;//合成图片的异步任务
 	@Override
 	public void onNewIntent(Intent intent) {
 		super.onNewIntent(intent);
@@ -183,7 +184,6 @@ public class PicEditActivity extends Activity implements OnClickListener {
 			if (bundle.getInt(AppConstantS.STORY_MODE)==StoryEditActivity.STORY_EDIT) {
 				isEdit = true;
 			}
-			Log.v(TAG,"curGifNum"+curGifNum+Util.gmList.size());
 		}else if(bundle.getString(AppConstantS.FROM_ACTIVITY_NAME).equals(PicShareActivity.class.getName())){
 			isFromPicShareActivity= true;
 			gifBody.restartGifAnimation();
@@ -193,6 +193,9 @@ public class PicEditActivity extends Activity implements OnClickListener {
 		wm =  (WindowManager) this.getSystemService(Context.WINDOW_SERVICE);
 		devWid = wm.getDefaultDisplay().getWidth();//屏幕宽度
 
+		initData();
+		initButton();
+		
 		//初始化移动和缩放参数
 		MyGestureListener.finalLeft = 0;
 		MyGestureListener.finalTop = 0;
@@ -221,22 +224,7 @@ public class PicEditActivity extends Activity implements OnClickListener {
 		}
 		if (curGifNumini == -1){
 			//采用默认设置
-			gifHead = (ImageView) findViewById(R.id.edit_head);
-			gifHead.setImageBitmap(Util.getImageFromAssetFile(this, "head",
-					"head9.png"));			
-			
-			for (int i = 0;i < AppConstantS.GIF_FRAMECOUNT;i++) {
-				Util.head[i] = Util.getImageFromAssetFile(this, "head","head9.png");
-			}
-			
-			gifBody = (GifView) findViewById(R.id.edit_body);
-			//gifBody.setScaleType(ScaleType.CENTER);
-		
-			gifBody.setGifImage(Util.getInputStreamFromAsset(this, "body23",
-	"gif.gif"));
-			Util.curShowingHead = 9;
-			Util.curShowingBody = 23;
-			
+			ranChsPic();
 		}else{
 			System.out.println("记忆设计");
 			//采用记忆设置
@@ -249,8 +237,6 @@ public class PicEditActivity extends Activity implements OnClickListener {
 				Util.head[i] = Util.getImageFromAssetFile(this, AppConstantS.HEADNAME
 						,AppConstantS.HEADNAME + inihead + AppConstantS.PNG_ENDNAME);
 			}
-			
-			
 			gifBody = (GifView) findViewById(R.id.edit_body);
 			//gifBody.setScaleType(ScaleType.CENTER);
 		
@@ -294,8 +280,7 @@ public class PicEditActivity extends Activity implements OnClickListener {
 		gifBody.setGifImageType(GifImageType.COVER);
 		gifBody.setLoopAnimation();
 		
-		initData();
-		initButton();
+
 		
 		//帮助动画
 		SharedPreferences preferences;
@@ -347,38 +332,8 @@ public class PicEditActivity extends Activity implements OnClickListener {
 			return;
 		}
 		//拍照
-		Log.v(TAG,"从相机或图册返回"+resultCode+"data"+data);
 		if (requestCode == TAKE_PHOTO) {
-			BitmapFactory.Options newOpts = new BitmapFactory.Options();  
-	        //开始读入图片，此时把options.inJustDecodeBounds 设回true了  
-	        newOpts.inJustDecodeBounds = true;  
-	        System.out.println("mphotopath"+mPhotoPath);
-	        Bitmap bitmap = BitmapFactory.decodeFile(mPhotoPath,newOpts);//此时返回bm为空 
-	  
-	        //按手机自带照相机的分别率进行压缩
-	        newOpts.inJustDecodeBounds = false;  
-	        int w = newOpts.outWidth;  
-	        int h = newOpts.outHeight; 
-	        if((w/AppConstantS.FINAL_GIF_WIDTH) > 8) {
-	        	 newOpts.inSampleSize = 8;
-	        } else if((w/AppConstantS.FINAL_GIF_WIDTH) > 4){
-	        	newOpts.inSampleSize = 4;
-	        } else if((w/AppConstantS.FINAL_GIF_WIDTH) > 2){
-	         	newOpts.inSampleSize = 2;
-	        }
-	        bitmap = BitmapFactory.decodeFile(mPhotoPath, newOpts);  
-	        // 旋转图片
-	        int digree = Util.calPicAngle(mPhotoPath);
-			if (digree != 0) {
-				Matrix m = new Matrix();
-				m.postRotate(digree);
-				bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), m, true);
-			}
-			//把图片剪裁成320*350 ，先计算宽高比   宽w高h			
-			bitmap= Util.cutOut320350(bitmap,(float) bitmap.getWidth(),(float) bitmap.getHeight());
-			//压缩图片
-			bitmap=Util.zoomBitmap(bitmap,AppConstantS.FINAL_GIF_WIDTH,AppConstantS.FINAL_GIF_HEIGHT);
-			
+			Bitmap bitmap = Util.calPicFromPath(mPhotoPath);
 			if (bitmap != null) {
 				gifBg.setImageBitmap(bitmap);
 				Util.background = bitmap;
@@ -386,72 +341,25 @@ public class PicEditActivity extends Activity implements OnClickListener {
 		}   
 		// 调用Gallery返回的  
 		else if(requestCode ==  CHS_PHOTO) {
-			System.out.println("chs.photo");
 			//外界的程序访问ContentProvider所提供数据 可以通过ContentResolver接口
             ContentResolver resolver = getContentResolver();
-
         	//获得图片的URI
             Uri originalUri = data.getData();       
-            Bitmap bitmap;
-			try {
-				bitmap = MediaStore.Images.Media.getBitmap(resolver, originalUri);
-	            //显得到bitmap图片
-//	            gifBg.setImageBitmap(bitmap);
-//	            Util.background = bitmap;
-	            
-	            String[] proj = {MediaStore.Images.Media.DATA};
-	            //好像是android多媒体数据库的封装接口，具体的看Android文档
-	            Cursor cursor = managedQuery(originalUri, proj, null, null, null); 
-	            //按我个人理解 这个是获得用户选择的图片的索引值
-	            int column_index = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
-	            //将光标移至开头 ，这个很重要，不小心很容易引起越界
-	            cursor.moveToFirst();
-	            //最后根据索引值获取图片路径
-	            String path = cursor.getString(column_index);
-	        
-	            
-	            
-	            BitmapFactory.Options newOpts = new BitmapFactory.Options();  
-		        //开始读入图片，此时把options.inJustDecodeBounds 设回true了  
-		        newOpts.inJustDecodeBounds = true;  
-		        System.out.println("path"+path);
-		        Bitmap bitmap1 = BitmapFactory.decodeFile(path,newOpts);//此时返回bm为空 
-		        
-		        //按手机自带照相机的分别率进行压缩
-		        newOpts.inJustDecodeBounds = false;  
-		        int w = newOpts.outWidth;  
-		        int h = newOpts.outHeight; 
-		        if((w/AppConstantS.FINAL_GIF_WIDTH) > 8) {
-		        	 newOpts.inSampleSize = 8;
-		        } else if((w/AppConstantS.FINAL_GIF_WIDTH) > 4){
-		        	newOpts.inSampleSize = 4;
-		        } else if((w/AppConstantS.FINAL_GIF_WIDTH) > 2){
-		         	newOpts.inSampleSize = 2;
-		        }
-		        bitmap1 = BitmapFactory.decodeFile(path, newOpts); 
-		        // 旋转图片
-		        int digree = Util.calPicAngle(path);
-				if (digree != 0) {
-					Matrix m = new Matrix();
-					m.postRotate(digree);
-					bitmap1 = Bitmap.createBitmap(bitmap1, 0, 0, bitmap1.getWidth(), bitmap1.getHeight(), m, true);
-				}
-				System.out.println("bitmap1"+bitmap1);
-				//把图片剪裁成320*350 ，先计算宽高比   宽w高h			
-				bitmap1= Util.cutOut320350(bitmap1,(float) bitmap1.getWidth(),(float) bitmap1.getHeight());
-				//压缩图片
-				bitmap1=Util.zoomBitmap(bitmap1,AppConstantS.FINAL_GIF_WIDTH,AppConstantS.FINAL_GIF_HEIGHT);
-				
-				if (bitmap1 != null) {
-					gifBg.setImageBitmap(bitmap1);
-					Util.background = bitmap1;
-				}
-	            
-			} catch (FileNotFoundException e) {
-				e.printStackTrace();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}        
+            String[] proj = {MediaStore.Images.Media.DATA};
+            //好像是android多媒体数据库的封装接口，具体的看Android文档
+            Cursor cursor = managedQuery(originalUri, proj, null, null, null); 
+            //按我个人理解 这个是获得用户选择的图片的索引值
+            int column_index = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
+            //将光标移至开头 ，这个很重要，不小心很容易引起越界
+            cursor.moveToFirst();
+            //最后根据索引值获取图片路径
+            String path = cursor.getString(column_index);
+        
+	        Bitmap bitmap = Util.calPicFromPath(path);
+			if (bitmap!= null) {
+				gifBg.setImageBitmap(bitmap);
+				Util.background = bitmap;
+			}  
         }  
 	}
 	
@@ -470,6 +378,9 @@ public class PicEditActivity extends Activity implements OnClickListener {
 	}
 
 	private void initButton() {
+		gifHead = (ImageView)findViewById(R.id.edit_head);
+		gifBody = (GifView) findViewById(R.id.edit_body);
+		
 		// 初始化topbar右边按钮
 		topbar_btnRight = (Button) findViewById(R.id.topbar_btn_right);
 		if (isFromStoryMode){
@@ -585,8 +496,6 @@ public class PicEditActivity extends Activity implements OnClickListener {
 				mgTask.cancel(true);
 			}
 		});
-		//背景 
-
 		// 选择头部和身子的按钮
 		changehead = (Button) this.findViewById(R.id.changehead);
 		changebody = (Button) this.findViewById(R.id.changebody);
@@ -677,15 +586,9 @@ public class PicEditActivity extends Activity implements OnClickListener {
 					changehead.setTag(BUTTON_OPEN);					
 					changehead.setBackgroundResource(R.drawable.picedit_toolbar_btn_changehead_pressed);
 					chsHeadHsv.setVisibility(View.VISIBLE);
-					// 3、 如果此时身子菜单为打开状态
-					// （１）设置身子按钮ＴＡＧ属性为关闭
-					// （２）隐藏身子的两个菜单
-					if ((Integer) changebody.getTag() == BUTTON_OPEN) {
-						changebody.setTag(BUTTON_CLOSE);
-						chsBodyHsv.setVisibility(View.INVISIBLE);
-						chsHeadBodyLay2.setVisibility(View.INVISIBLE);
-						changebody.setBackgroundResource(R.drawable.picedit_toolbar_btn_changebody_nor);
-					}
+					// 3、关掉身子和背景的选择菜单
+					closeChangeBody();
+					closeChangeFrame();
 					// 4、清除之前头部相关按钮的选中状态
 					cancelLayer1HeadChs();
 					cancelLayer2ChsState();
@@ -702,41 +605,7 @@ public class PicEditActivity extends Activity implements OnClickListener {
 			}
 		});
 	}
-	//边框菜单初始化
-	private void initChangeFrameBtn() {
-		// 身子菜单按钮的事件
-		changeframe.setOnClickListener(new OnClickListener() {
-			public void onClick(View v) {
-				if ((Integer) v.getTag() == BUTTON_CLOSE) {
-					// 当点击身子按钮操作为：关闭--〉打开
-					// 1、改变身子按钮TAG属性为打开
-					// 2、 显示第一行身子菜单
-					changeframe.setBackgroundResource(R.drawable.picedit_toolbar_btn_changebody_pressed);
-					changeframe.setTag(BUTTON_OPEN);
-					chsFrameHsv.setVisibility(View.VISIBLE);
-					
-					// 3、 如果此时头或身子部菜单为打开状态
-					closeChangeBody();
-					closeChangeHead();
-					// 4、清除之前身子相关按钮的选中状态
-					//cancelLayer1BodyChs();
-					//cancelLayer2ChsState();
-				} else {
-					// 当点击身子按钮操作为：打开--〉关闭
-					// １、点击后，关闭两行身子菜单
-					// ２、设置身子按钮ＴＡＧ属性为关闭
-					// ３、重启身子的动画
-					changeframe.setTag(BUTTON_CLOSE);
-					chsFrameHsv.setVisibility(View.INVISIBLE);
-					chsHeadBodyLay2.setVisibility(View.INVISIBLE);
-					changeframe.setBackgroundResource(R.drawable.picedit_toolbar_btn_changebody_nor);
-					gifBody.restartGifAnimation();
-				}
-			}
-		});
-	}
-		
-		
+	
 	//身子按钮初始化
 	private void initChangeBodyBtn() {
 		//身子菜单按钮的事件
@@ -752,7 +621,7 @@ public class PicEditActivity extends Activity implements OnClickListener {
 					
 					// 3、 如果此时头和身子菜单为打开状态
 					closeChangeHead();
-					
+					closeChangeFrame();
 					// 4、清除之前头和身子相关按钮的选中状态
 					cancelLayer1BodyChs();
 					cancelLayer2ChsState();
@@ -771,6 +640,40 @@ public class PicEditActivity extends Activity implements OnClickListener {
 		});
 	}
 	
+	//背景菜单初始化
+	private void initChangeFrameBtn() {
+		// 身子菜单按钮的事件
+		changeframe.setOnClickListener(new OnClickListener() {
+			public void onClick(View v) {
+				if ((Integer) v.getTag() == BUTTON_CLOSE) {
+					// 当点击身子按钮操作为：关闭--〉打开
+					// 1、改变身子按钮TAG属性为打开
+					// 2、 显示第一行身子菜单
+					changeframe.setBackgroundResource(R.drawable.picedit_toolbar_btn_changebody_pressed);
+					changeframe.setTag(BUTTON_OPEN);
+					chsFrameHsv.setVisibility(View.VISIBLE);
+					
+					// 3、 如果此时头或身子部菜单为打开状态
+					closeChangeBody();
+					closeChangeHead();
+					// 4、清除之前身子相关按钮的选中状态
+					cancelLayer1BodyChs();
+					cancelLayer2ChsState();
+				} else {
+					// 当点击身子按钮操作为：打开--〉关闭
+					// １、点击后，关闭两行身子菜单
+					// ２、设置身子按钮ＴＡＧ属性为关闭
+					// ３、重启身子的动画
+					changeframe.setTag(BUTTON_CLOSE);
+					chsFrameHsv.setVisibility(View.INVISIBLE);
+					chsHeadBodyLay2.setVisibility(View.INVISIBLE);
+					changeframe.setBackgroundResource(R.drawable.picedit_toolbar_btn_changebody_nor);
+					gifBody.restartGifAnimation();
+				}
+			}
+		});
+	}
+		
 	private void closeChangeHead() {
 		// 3、 如果此时头部菜单为打开状态
 		// （１）设置头部按钮ＴＡＧ属性为关闭
@@ -784,14 +687,25 @@ public class PicEditActivity extends Activity implements OnClickListener {
 	}
 	
 	private void closeChangeBody() {
-		// 3、 如果此时头部菜单为打开状态
+		// 3、 如果此时身子菜单为打开状态
 		// （１）设置头部按钮ＴＡＧ属性为关闭
 		// （２）隐藏头部的两个菜单
-		if ((Integer) changehead.getTag() == BUTTON_OPEN) {
-			changehead.setTag(BUTTON_CLOSE);
-			chsHeadHsv.setVisibility(View.INVISIBLE);
+		if ((Integer) changebody.getTag() == BUTTON_OPEN) {
+			changebody.setTag(BUTTON_CLOSE);
+			chsBodyHsv.setVisibility(View.INVISIBLE);
 			chsHeadBodyLay2.setVisibility(View.INVISIBLE);
-			changehead.setBackgroundResource(R.drawable.picedit_toolbar_btn_changehead_nor);
+			changebody.setBackgroundResource(R.drawable.picedit_toolbar_btn_changebody_nor);
+		}
+	}
+	
+	private void closeChangeFrame() {
+		// 3、 如果此时背景菜单为打开状态
+		// （１）设置背景按钮ＴＡＧ属性为关闭
+		// （２）隐藏头部的两个菜单
+		if ((Integer) changeframe.getTag() == BUTTON_OPEN) {
+			changeframe.setTag(BUTTON_CLOSE);
+			chsFrameHsv.setVisibility(View.INVISIBLE);
+			changeframe.setBackgroundResource(R.drawable.picedit_toolbar_btn_changehead_nor);
 		}
 	}
 	
@@ -884,6 +798,7 @@ public class PicEditActivity extends Activity implements OnClickListener {
 			}
 		}
 	}
+	
 	//初始化头身的二级菜单和对应点击事件
 	private void initHeadBodyLayer2Btn() {
 		//遍历每一个二级菜单的对应按钮，分别设置点击相应事件
@@ -938,6 +853,20 @@ public class PicEditActivity extends Activity implements OnClickListener {
 			chsBodyLay.getChildAt(i).setBackgroundResource(R.drawable.picedit_class_select);
 		}
 	}
+	//随机选图
+	private void ranChsPic() {
+		// 改变当前头和身子的图编号
+		Util.curShowingHead = (int) (Math.random() * AppConstantS.headNumber + 1);
+		Util.curShowingBody = (int) (Math.random() * AppConstantS.bodyNumber + 1);
+		gifHead.setImageBitmap(Util.getImageFromAssetFile(context,
+				"head", "head" + Util.curShowingHead + ".png"));
+		gifBody.setGifImage(Util.getInputStreamFromAsset(context,
+				AppConstantS.BODYNAME + Util.curShowingBody,  "gif"+ AppConstantS.GIF_ENDNAME));
+		for (int i = 0;i < AppConstantS.GIF_FRAMECOUNT;i++)	{
+			Util.head[i] = Util.getImageFromAssetFile(context,AppConstantS.HEADNAME, 
+				AppConstantS.HEADNAME+Util.curShowingHead + AppConstantS.PNG_ENDNAME);
+		}
+	}
 	
 	// 后台线程处理点击事件和摇动操作
 	Handler handler = new Handler() {
@@ -948,19 +877,7 @@ public class PicEditActivity extends Activity implements OnClickListener {
 			switch (msg.what) {
 				case SENSOR_SHAKE:
 					Log.v(TAG, "编辑页面中，用户在摇动手机，正在执行随机为用户选图");
-					// 改变cur图的编号
-					Util.curShowingHead = (int) (Math.random() * AppConstantS.headNumber + 1);
-					Util.curShowingBody = (int) (Math.random() * AppConstantS.bodyNumber + 1);
-					
-					gifHead.setImageBitmap(Util.getImageFromAssetFile(context,
-							"head", "head" + Util.curShowingHead + ".png"));
-					gifBody.setGifImage(Util.getInputStreamFromAsset(context,
-							AppConstantS.BODYNAME + Util.curShowingBody,  "gif"+ AppConstantS.GIF_ENDNAME));
-					
-					for (int i = 0;i < AppConstantS.GIF_FRAMECOUNT;i++)	{
-						Util.head[i] = Util.getImageFromAssetFile(context,AppConstantS.HEADNAME, 
-							AppConstantS.HEADNAME+Util.curShowingHead + AppConstantS.PNG_ENDNAME);
-					}
+					ranChsPic();
 					//摇一摇的声音
 					MediaPlayer mp = MediaPlayer.create(PicEditActivity.this, R.raw.shake);
 					mp.start();
@@ -1135,17 +1052,24 @@ public class PicEditActivity extends Activity implements OnClickListener {
 			//关闭有该按钮点击功能直到线程结束，防止连续点击
 			topbar_btnRight.setClickable(false);
 			
-			if (!isFromWX) {
-				MobclickAgent.onEvent(PicEditActivity.this, "share_click");
+			HashMap<String,String> map = new HashMap<String,String>();
+			map.put("headNum",Util.curShowingHead+"");
+			map.put("bodyNum",Util.curShowingBody+""); 
+			MobclickAgent.onEvent(PicEditActivity.this, "sharenum", map);  
+			
+			if (isFromWX) {
+				MobclickAgent.onEvent(PicEditActivity.this, AppConstantS.UMENG_SHARE_FROM_WEIXIN);
 			}
-			mgTask = new MakeGifTask();
-			mgTask.execute();
+			if(!topbar_btnRight.isClickable()) {
+				mgTask = new MakeGifTask();
+				mgTask.execute();
+			}
 			break;
 		default:
 			break;
 		}
 	}
-	MakeGifTask mgTask;
+
 	
 	
 	protected void onPause() {
@@ -1286,7 +1210,6 @@ public class PicEditActivity extends Activity implements OnClickListener {
 					GetMessageFromWX.Resp resp = new GetMessageFromWX.Resp();
 					resp.transaction = getTransaction();
 					resp.message = msg;
-					MobclickAgent.onEvent(PicEditActivity.this, "share_click");
 					mmAPI.sendResp(resp);
 					finish();
 					System.exit(0);

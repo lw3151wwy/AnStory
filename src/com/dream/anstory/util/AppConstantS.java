@@ -9,6 +9,12 @@ public interface AppConstantS {
 	public static final String STORY_MODE = "STORY_MODE";
 	public static final String STORY_GIF_NUM = "STORYGIFNUM";
 	
+	//友盟事件
+	public static final String UMENG_SHARE_TO_WEIXIN = "share_to_weixin";
+	public static final String UMENG_SHARE_TO_WEIBO  = "share_to_weibo";
+	public static final String UMENG_SHARE_TO_RENREN = "share_to_renren";
+	public static final String UMENG_SHARE_FROM_WEIXIN = "share_from_weixin";
+	
 	//头部和身子的数量
 	public static int headNumber = 20;
 	public static int bodyNumber = 29;
