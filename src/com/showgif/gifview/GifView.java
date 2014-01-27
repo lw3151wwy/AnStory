@@ -182,7 +182,7 @@ public class GifView extends ImageView implements GifAction, GifReDraw {
 	 * 以资源形式设置gif图片
 	 * 
 	 * @param resId
-	 *            gif图片的资源ID
+	 * gif图片的资源ID
 	 */
 	public void setGifImage(int resId) {
 		setGifDecoderImage(getResources(), resId);
@@ -205,6 +205,7 @@ public class GifView extends ImageView implements GifAction, GifReDraw {
 	 * 继续显示动画。当动画暂停后，通过本方法来使动画继续
 	 */
 	public void restartGifAnimation() {
+		System.out.println("restartanimation");
 		if (singleFrame)
 			return;
 		if (animationRun&&isPause) {

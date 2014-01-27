@@ -345,14 +345,14 @@ public class GifDecoder extends Thread {
 			//can get image here 
 			if(isSaveFrame) {
 				if (height == AppConstantS.FINAL_GIF_HEIGHT){
-					for(int i=0;i<AppConstantS.GIF_FRAMECOUNT;i++)
-					Util.body[curFrameCount] = image;
-					curFrameCount++;
-					if (curFrameCount == AppConstantS.GIF_FRAMECOUNT) {
-						curFrameCount = 0;
+					Util.body[Util.curMakeFrame] = image;
+					Util.curMakeFrame++;
+					if (Util.curMakeFrame == AppConstantS.GIF_FRAMECOUNT) {
+						Util.curMakeFrame = 0;
 						isSaveFrame = false;
 					}
 				}
+				
 			}
 		} catch (OutOfMemoryError e) {
 			e.printStackTrace();

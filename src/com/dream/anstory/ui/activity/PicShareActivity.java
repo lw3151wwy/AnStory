@@ -43,7 +43,9 @@ import android.net.ConnectivityManager;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.View.OnTouchListener;
 import android.view.WindowManager;
 import android.view.View.OnClickListener;
 import android.widget.Button;
@@ -66,8 +68,9 @@ public class PicShareActivity extends Activity {
 	
 	//传递从哪里来
 	private Bundle bundle;
-	//
+	//来自故事模式，来自编辑模式
 	private boolean isFromStory; 
+	private boolean isFromEdit;
 	// 微博缩略图
 	private static final int THUMB_SIZE = 120;
 	private IWXAPI mmAPI;
@@ -93,6 +96,8 @@ public class PicShareActivity extends Activity {
 		bundle = getIntent().getExtras();
 		if (bundle.getString(AppConstantS.FROM_ACTIVITY_NAME).equals(StoryEditActivity.class.getName())) {
 			isFromStory = true;
+		} else if(bundle.getString(AppConstantS.FROM_ACTIVITY_NAME).equals(StoryEditActivity.class.getName())) {
+			isFromEdit = true;
 		}
 		// 设置MAIN的大标题
 		TextView tv = (TextView) findViewById(R.id.topbar_titletxt);
@@ -102,17 +107,6 @@ public class PicShareActivity extends Activity {
 		btnLeft.setVisibility(View.VISIBLE);
 		btnLeft.setOnClickListener(new OnClickListener() {
 			public void onClick(View v) {
-				PicShareActivity.this.finish();
-				Intent intent;
-				if (isFromStory){
-					intent = new Intent(PicShareActivity.this,
-							StoryEditActivity.class);
-				}else{
-					intent = new Intent(PicShareActivity.this,
-							PicEditActivity.class);
-				}				
-				intent.putExtra(AppConstantS.FROM_ACTIVITY_NAME, PicShareActivity.this.getClass().getName());
-				startActivity(intent);
 				PicShareActivity.this.finish();
 			}
 		});
@@ -124,6 +118,13 @@ public class PicShareActivity extends Activity {
 		showGif.setGifImage(resultPath);
 		showGif.setGifImageType(GifImageType.COVER);
 		showGif.setLoopAnimation();
+		showGif.setOnTouchListener(new OnTouchListener() {
+			public boolean onTouch(View v, MotionEvent event) {
+				showGif.restartGifAnimation();
+				return false;
+			}
+		});
+		
 		RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(devWid-devWid/5,(devWid-devWid/5)*AppConstantS.FINAL_GIF_HEIGHT
 				/AppConstantS.FINAL_GIF_WIDTH);
 		//params.addRule(RelativeLayout.CENTER_IN_PARENT,RelativeLayout.TRUE);		
@@ -139,17 +140,7 @@ public class PicShareActivity extends Activity {
 		}
 		ScrollView scrollView = (ScrollView) this.findViewById(R.id.scrollview);
 		showGif.setLayoutParams(paramsShowgif);
-		scrollView.setLayoutParams(params);		
-		/*try {
-			InputStream gifShowIn = new FileInputStream(resultPath);
-		} catch (FileNotFoundException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
-		*/
-		//FileInputStream fin = openFileInput(fileName);  
-		
-		
+		scrollView.setLayoutParams(params);	
 		
 		weiboAccessToken = AccessTokenKeeper.readAccessToken(this);
 		// 微信分享
@@ -376,9 +367,7 @@ public class PicShareActivity extends Activity {
 					.show();
 		}
 	}
-	
 
-	
 	@Override
 	protected void onResume() {
 		super.onResume();
@@ -404,21 +393,11 @@ public class PicShareActivity extends Activity {
 		return netSataus;   
 	}
 	
-
 	public boolean onKeyDown(int keyCode, KeyEvent event) {
 		switch (keyCode) {
 		case KeyEvent.KEYCODE_BACK:
-			PicShareActivity.this.finish();
-			Intent intent;
-			if (isFromStory){
-				intent = new Intent(PicShareActivity.this,
-						StoryEditActivity.class);
-			}else{
-				intent = new Intent(PicShareActivity.this,
-						PicEditActivity.class);
-			}				
-			intent.putExtra(AppConstantS.FROM_ACTIVITY_NAME, PicShareActivity.this.getClass().getName());
-			startActivity(intent);
+			Intent in = new Intent(PicShareActivity.this,PicEditActivity.class);
+			setResult(AppConstantS.GIFSHARE_B_EMOJ,in);
 			PicShareActivity.this.finish();
 		}
 		return super.onKeyDown(keyCode, event);

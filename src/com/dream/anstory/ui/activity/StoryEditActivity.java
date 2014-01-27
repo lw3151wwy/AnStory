@@ -8,7 +8,7 @@ import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.res.Resources;
+import android.content.DialogInterface.OnCancelListener;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -24,12 +24,10 @@ import android.text.StaticLayout;
 import android.text.TextPaint;
 import android.text.Layout.Alignment;
 import android.util.Log;
-import android.util.TypedValue;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.View.OnClickListener;
-import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -39,13 +37,11 @@ import android.widget.Toast;
 import android.widget.RelativeLayout.LayoutParams;
 import android.widget.ScrollView;
 import android.widget.TextView;
-
 import com.dream.anstory.R;
 import com.dream.anstory.R.color;
 import com.dream.anstory.util.AppConstantS;
-import com.dream.anstory.util.GifModel;
 import com.dream.anstory.util.Util;
-import com.showgif.jpg2gif.AnimatedGifEncoder1;
+import com.showgif.jpg2gif.JpgToGif;
 
 /*
  * 逻辑需要修改
@@ -55,11 +51,16 @@ import com.showgif.jpg2gif.AnimatedGifEncoder1;
 public class StoryEditActivity extends Activity{
 	public static String TAG = "com.dream.anstory.ui.activity.StoryEditActivity";
 	public static final int STORY_EDIT = 1;
-	public static final int STORY_ADD = 2;
-	public static final int ResNumFromPicAdd = 100;
-	public static final int ResNumFromPicEdit = 200;
+	public static final int STORY_BOT_ADD = 2;
+	public static final int STORY_INSERT = 3;
+	// 用于线程控制
+	public static final int MATCH_A_FRAME = 6; //拼接完一帧图片，HandlerMsg
+
+	public static final int ResNumFromPicAdd = 100;	//GIF添加
+	public static final int ResNumFromPicEdit = 200;//GIF编辑
+	public static final int ResNumFromCancel = 900; //GIF取消
+	//初始的图片数 （只有标题）
 	private int curGifNum = 0;
-	
 	//放所有小容器的主容器
 	LinearLayout mainLayout;
 	//存放子容器的对列
@@ -79,111 +80,36 @@ public class StoryEditActivity extends Activity{
 	private Button topbar_btnLeft;
 	//公用topbar的右按钮
 	private Button topbar_btnRight;
-	//标题textview
+	//标题t
 	private TextView titleView;
-	//作者textview
+	//作者t
 	private TextView authorView;
 	//作者文本
 	private String tempText;
     int count = 0;
 	
     ScrollView scrollView;
+    private MakeGifTask mgTask ;
+    
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);		
 		setContentView(R.layout.storyedit);
 		initData();
 		initBtn();
-		
-		//一上来添加标题
-		final View addWordDig = getLayoutInflater().inflate(R.layout.addword_dialog, null);
-		final EditText gifEditWord = (EditText) addWordDig.findViewById(R.id.gif_editword);
-		gifEditWord.setHint("给你的故事一个标题");
-		//自动使用上次输入的内容
-		if(titleView!=null) {
-			gifEditWord.setText(titleView.getText().toString());
-		}
-		AlertDialog aDlg = new AlertDialog.Builder(StoryEditActivity.this)
-		.setTitle("添加故事标题(不超过九个字符)")
-		.setView(addWordDig)
-		.setPositiveButton("确定", new DialogInterface.OnClickListener() {
-			public void onClick(DialogInterface dialog, int whichButton) {
-				//刷新显示gif_showword的ui
-				if (gifEditWord.getText().toString()!=null&&gifEditWord.getText().toString().length()!=0){
-					titleView.setText(gifEditWord.getText().toString());
-				}else{
-					titleView.setText("我的故事");
-				}
-				final View addWordDig = getLayoutInflater().inflate(R.layout.addword_dialog, null);
-				final EditText gifEditWord = (EditText) addWordDig.findViewById(R.id.gif_editword);
-				gifEditWord.setHint("输入你的大名");
-				//gifEditWord.requestFocus();
-				//自动使用上次输入的内容
-				if(tempText!=null) {
-					gifEditWord.setText(tempText);
-				}
-				AlertDialog aDlg = new AlertDialog.Builder(StoryEditActivity.this)
-				.setTitle("添加创作者(不超过九个字符)")
-				.setView(addWordDig)
-				.setPositiveButton("确定", new DialogInterface.OnClickListener() {
-					public void onClick(DialogInterface dialog, int whichButton) {
-						//刷新显示gif_showword的ui						
-						tempText = gifEditWord.getText().toString();
-						if (tempText!=null&&tempText.length()!=0){
-							authorView.setText("创作者："+tempText);
-						}else{
-							authorView.setText("创作者：匿名");
-						}
-					}
-				}).setNegativeButton("取消", new DialogInterface.OnClickListener() {
-					public void onClick(DialogInterface dialog, int whichButton) {
-						authorView.setText("创作者：匿名");
-						//Toast.makeText(PicEditActivity.this, "dialogcancel", Toast.LENGTH_LONG).show();
-					}
-				}).create();
-				aDlg.show();
-			}
-		}).setNegativeButton("取消", new DialogInterface.OnClickListener() {
-			public void onClick(DialogInterface dialog, int whichButton) {
-				titleView.setText("我的故事");
-				//Toast.makeText(PicEditActivity.this, "dialogcancel", Toast.LENGTH_LONG).show();
-				final View addWordDig = getLayoutInflater().inflate(R.layout.addword_dialog, null);
-				final EditText gifEditWord = (EditText) addWordDig.findViewById(R.id.gif_editword);
-				gifEditWord.setHint("输入你的大名");
-				gifEditWord.requestFocus();
-				//自动使用上次输入的内容
-				if(tempText!=null) {
-					gifEditWord.setText(tempText);
-				}
-				AlertDialog aDlg = new AlertDialog.Builder(StoryEditActivity.this)
-				.setTitle("添加创作者(不超过九个字符)")
-				.setView(addWordDig)
-				.setPositiveButton("确定", new DialogInterface.OnClickListener() {
-					public void onClick(DialogInterface dialog, int whichButton) {
-						//刷新显示gif_showword的ui						
-						tempText = gifEditWord.getText().toString();
-						if (tempText!=null&&tempText.length()!=0){
-							authorView.setText("创作者："+tempText);
-						}else{
-							authorView.setText("创作者：匿名");
-						}
-					}
-				}).setNegativeButton("取消", new DialogInterface.OnClickListener() {
-					public void onClick(DialogInterface dialog, int whichButton) {
-						authorView.setText("创作者：匿名");
-						//Toast.makeText(PicEditActivity.this, "dialogcancel", Toast.LENGTH_LONG).show();
-					}
-				}).create();
-				aDlg.show();
-			}
-		}).create();
-		aDlg.show();
+		initDialog();
 	}
-	
+
 	private void initData() {
 		picList = new ArrayList<RelativeLayout>();	
 		//生成图片时要用到的进度条
 		makeGifTimeDialog = (ProgressDialog)new ProgressDialog(StoryEditActivity.this);
+		makeGifTimeDialog.setOnCancelListener(new OnCancelListener() {
+			public void onCancel(DialogInterface dialog) {		
+				//取消进度条时，取消JPG2GIF的异步任务
+				mgTask.cancel(true);
+			}
+		});
 		//获得主容器,用于放每个子容器（子容器装着每一张故事的预览图片）
 		mainLayout = (LinearLayout)findViewById(R.id.storylayout);		
 		//计算屏幕宽度
@@ -200,42 +126,22 @@ public class StoryEditActivity extends Activity{
 				clearData();
 			}
 		});
-		// 初始化topbar右边按钮
+	
+		//初始化topbar右边按钮
 		topbar_btnRight = (Button) findViewById(R.id.topbar_btn_right);
 		topbar_btnRight.setVisibility(View.VISIBLE);
 		topbar_btnRight.setOnClickListener(new OnClickListener() {
 			public void onClick(View v) {
-				
-				
 				if(!picList.isEmpty()) {
 					topbar_btnRight.setClickable(false);
-					new MakeGifTask().execute();
+					mgTask = new MakeGifTask();
+					mgTask.execute();
 				} else {
 					Toast.makeText(StoryEditActivity.this, "您还没有添加动画哦...", Toast.LENGTH_LONG).show();
 				}
 			}
 		});
 		
-		addNewGif=(ImageView) this.findViewById(R.id.addnewgif);
-		android.widget.LinearLayout.LayoutParams paramsAddNewGif = new android.widget.LinearLayout.LayoutParams(devWid-devWid/10, (devWid-devWid/10) * AppConstantS.FINAL_GIF_HEIGHT / AppConstantS.FINAL_GIF_WIDTH);
-		//params.addRule(LinearLayout.CENTER_IN_PARENT, LineareLayout.TRUE);
-		addNewGif.setBackgroundResource(R.drawable.storyedit_btn_addgif_big_sel);
-		addNewGif.setLayoutParams(paramsAddNewGif);
-		addNewGif.setOnClickListener(new OnClickListener() {
-			public void onClick(View v) {
-				Intent in = new Intent(StoryEditActivity.this,PicEditActivity.class);
-				//是从哪个模块传入GIF制作的
-				in.putExtra(AppConstantS.FROM_ACTIVITY_NAME, StoryEditActivity.this.getClass().getName());
-				in.putExtra(AppConstantS.STORY_MODE, STORY_ADD);
-				//是添加第几张或编辑第几张
-				curGifNum = Util.gmList.size();
-				System.out.println("curgifL:"+curGifNum);
-				in.putExtra(AppConstantS.STORY_GIF_NUM, curGifNum);
-				//是添加还是编辑模式
-				//in.putExtra(AppConstantS.STORYMODE_PIC_NUM, value);
-				startActivityForResult(in, 100);
-			}
-		});
 		//添加标题事件
 		titleView = (TextView) this.findViewById(R.id.titleview);
 		android.widget.LinearLayout.LayoutParams paramsTitleView = new android.widget.LinearLayout.LayoutParams(devWid-devWid/10, LayoutParams.WRAP_CONTENT);
@@ -265,7 +171,6 @@ public class StoryEditActivity extends Activity{
 					}
 				}).setNegativeButton("取消", new DialogInterface.OnClickListener() {
 					public void onClick(DialogInterface dialog, int whichButton) {
-						//Toast.makeText(PicEditActivity.this, "dialogcancel", Toast.LENGTH_LONG).show();
 					}
 				}).create();
 				aDlg.show();
@@ -300,14 +205,110 @@ public class StoryEditActivity extends Activity{
 					}
 				}).setNegativeButton("取消", new DialogInterface.OnClickListener() {
 					public void onClick(DialogInterface dialog, int whichButton) {
-						//Toast.makeText(PicEditActivity.this, "dialogcancel", Toast.LENGTH_LONG).show();
 					}
 				}).create();
 				aDlg.show();
 			}
 		});
+		
+		addNewGif=(ImageView) this.findViewById(R.id.addnewgif);
+		android.widget.LinearLayout.LayoutParams paramsAddNewGif = new android.widget.LinearLayout.LayoutParams(devWid-devWid/10, (devWid-devWid/10) * AppConstantS.FINAL_GIF_HEIGHT / AppConstantS.FINAL_GIF_WIDTH);
+		//params.addRule(LinearLayout.CENTER_IN_PARENT, LineareLayout.TRUE);
+		addNewGif.setBackgroundResource(R.drawable.storyedit_btn_addgif_big_sel);
+		addNewGif.setLayoutParams(paramsAddNewGif);
+		addNewGif.setOnClickListener(new OnClickListener() {
+			public void onClick(View v) {
+				Intent in = new Intent(StoryEditActivity.this,PicEditActivity.class);
+				//是从哪个模块传入GIF制作的
+				in.putExtra(AppConstantS.FROM_ACTIVITY_NAME, StoryEditActivity.this.getClass().getName());
+				in.putExtra(AppConstantS.STORY_MODE, STORY_BOT_ADD);
+				// util.gmlist.size永远比队列最后一位坐标大1，所以curgifnum为对尾之后的那个坐标
+				curGifNum = Util.gmList.size();
+				System.out.println("curgifL:"+curGifNum);
+				in.putExtra(AppConstantS.STORY_GIF_NUM, curGifNum);
+				//是添加还是编辑模式
+				startActivityForResult(in, 100);
+			}
+		});
 	}
 	
+	//初始化故事对话框
+	private void initDialog() {
+		// 一上来添加标题
+		final View addWordDig = getLayoutInflater().inflate(R.layout.addword_dialog, null);
+		final EditText gifEditWord = (EditText) addWordDig.findViewById(R.id.gif_editword);
+		gifEditWord.setHint("给你的故事一个标题");
+		// 自动使用上次输入的内容
+		if (titleView != null) {
+			gifEditWord.setText(titleView.getText().toString());
+		}
+		AlertDialog aDlg = new AlertDialog.Builder(StoryEditActivity.this).setTitle("添加故事标题(不超过九个字符)").setView(addWordDig).setPositiveButton("确定", new DialogInterface.OnClickListener() {
+			public void onClick(DialogInterface dialog, int whichButton) {
+				// 刷新显示gif_showword的ui
+				if (gifEditWord.getText().toString() != null && gifEditWord.getText().toString().length() != 0) {
+					titleView.setText(gifEditWord.getText().toString());
+				} else {
+					titleView.setText("我的故事");
+				}
+				final View addWordDig = getLayoutInflater().inflate(R.layout.addword_dialog, null);
+				final EditText gifEditWord = (EditText) addWordDig.findViewById(R.id.gif_editword);
+				gifEditWord.setHint("输入你的大名");
+				// gifEditWord.requestFocus();
+				// 自动使用上次输入的内容
+				if (tempText != null) {
+					gifEditWord.setText(tempText);
+				}
+				AlertDialog aDlg = new AlertDialog.Builder(StoryEditActivity.this).setTitle("添加创作者(不超过九个字符)").setView(addWordDig).setPositiveButton("确定", new DialogInterface.OnClickListener() {
+					public void onClick(DialogInterface dialog, int whichButton) {
+						// 刷新显示gif_showword的ui
+						tempText = gifEditWord.getText().toString();
+						if (tempText != null && tempText.length() != 0) {
+							authorView.setText("创作者：" + tempText);
+						} else {
+							authorView.setText("创作者：匿名");
+						}
+					}
+				}).setNegativeButton("取消", new DialogInterface.OnClickListener() {
+					public void onClick(DialogInterface dialog, int whichButton) {
+						authorView.setText("创作者：匿名");
+					}
+				}).create();
+				aDlg.show();
+			}
+		}).setNegativeButton("取消", new DialogInterface.OnClickListener() {
+			public void onClick(DialogInterface dialog, int whichButton) {
+				titleView.setText("我的故事");
+				// Toast.makeText(PicEditActivity.this, "dialogcancel",
+				// Toast.LENGTH_LONG).show();
+				final View addWordDig = getLayoutInflater().inflate(R.layout.addword_dialog, null);
+				final EditText gifEditWord = (EditText) addWordDig.findViewById(R.id.gif_editword);
+				gifEditWord.setHint("输入你的大名");
+				gifEditWord.requestFocus();
+				// 自动使用上次输入的内容
+				if (tempText != null) {
+					gifEditWord.setText(tempText);
+				}
+				AlertDialog aDlg = new AlertDialog.Builder(StoryEditActivity.this).setTitle("添加创作者(不超过九个字符)").setView(addWordDig).setPositiveButton("确定", new DialogInterface.OnClickListener() {
+					public void onClick(DialogInterface dialog, int whichButton) {
+						// 刷新显示gif_showword的ui
+						tempText = gifEditWord.getText().toString();
+						if (tempText != null && tempText.length() != 0) {
+							authorView.setText("创作者：" + tempText);
+						} else {
+							authorView.setText("创作者：匿名");
+						}
+					}
+				}).setNegativeButton("取消", new DialogInterface.OnClickListener() {
+					public void onClick(DialogInterface dialog, int whichButton) {
+						authorView.setText("创作者：匿名");
+					}
+				}).create();
+				aDlg.show();
+			}
+		}).create();
+		aDlg.show();
+	}
+
 	//制作单张GIF完毕返回
 	@Override
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -324,21 +325,15 @@ public class StoryEditActivity extends Activity{
 			Bitmap pic = Util.gmList.get(curGifNum).getBitmap();
 			//放每一张图片的子容器
 			final RelativeLayout picLayout = (RelativeLayout) getLayoutInflater().inflate(R.layout.hot_item, null);
-
 			ImageView siv = (ImageView) picLayout.findViewById(R.id.hotImage);
-
-			// picLayout.setTag(Util.gmList.get(Util.gmList.size()-1);
-			// siv.setCount(mainLayout.getChildCount());
 			siv.setImageBitmap(pic);
 			picList.add(curGifNum, picLayout);
 			
 			// 灵活计算中间gif图片的放置位置
-			// RelativeLayout tLayout = (RelativeLayout)
-			// this.findViewById(R.id.picedit_rellayout);
 			LayoutParams params = new LayoutParams(devWid-devWid/10, (devWid-devWid/10) * AppConstantS.FINAL_GIF_HEIGHT / AppConstantS.FINAL_GIF_WIDTH);
 			params.addRule(RelativeLayout.CENTER_IN_PARENT, RelativeLayout.TRUE);
 			picLayout.setLayoutParams(params);
-			//
+			
 			mainLayout.addView(picLayout, curGifNum+1);
 	
 			Button deleteBtn = (Button) picLayout.findViewById(R.id.delPic);
@@ -352,16 +347,18 @@ public class StoryEditActivity extends Activity{
 				}
 			});
 
-			Button addBtn = (Button) picLayout.findViewById(R.id.insertGif);
-			addBtn.setOnClickListener(new OnClickListener() {
+			Button insertBtn = (Button) picLayout.findViewById(R.id.insertGif);
+			insertBtn.setOnClickListener(new OnClickListener() {
 				public void onClick(View v) {
 					Intent in = new Intent(StoryEditActivity.this, PicEditActivity.class);
 					// 是从哪个模块传入GIF制作的
 					in.putExtra(AppConstantS.FROM_ACTIVITY_NAME, StoryEditActivity.this.getClass().getName());
-					// 是添加第几张或编辑第几张
+					// 本图上插入模式
+					in.putExtra(AppConstantS.STORY_MODE, STORY_INSERT);
+					// curgifnum为队列中的位置
+					// (0,1,2)假设点击第2个(数字1),curgifnum为1,插入位置为1.正好变为(0,插入数,1,2)
 					curGifNum = picList.indexOf(picLayout);
 					in.putExtra(AppConstantS.STORY_GIF_NUM, curGifNum);
-					//
 					startActivityForResult(in, 100);
 				}
 			});
@@ -372,8 +369,9 @@ public class StoryEditActivity extends Activity{
 					Intent in = new Intent(StoryEditActivity.this, PicEditActivity.class);
 					// 是从哪个模块传入GIF制作的
 					in.putExtra(AppConstantS.FROM_ACTIVITY_NAME, StoryEditActivity.this.getClass().getName());
+					// 编辑单张图片的方式
 					in.putExtra(AppConstantS.STORY_MODE, STORY_EDIT);
-					// 是添加第几张或编辑第几张
+					// 编辑当前坐标的图片
 					curGifNum = picList.indexOf(picLayout);
 					in.putExtra(AppConstantS.STORY_GIF_NUM, curGifNum);
 					// 是添加还是编辑模式
@@ -395,7 +393,6 @@ public class StoryEditActivity extends Activity{
 		
 		scrollView = (ScrollView)findViewById(R.id.scrollview);
 		scrollView.post(new Runnable() {
-			
 			public void run() {
 				scrollView.fullScroll(scrollView.FOCUS_DOWN);
 			}
@@ -423,7 +420,6 @@ public class StoryEditActivity extends Activity{
 			//tp.setTypeface(mFace);
 			//tp.setShadowLayer(5, 0, 0, Color.BLACK);
 			tp.setTextAlign(Align.CENTER);
-			
 			canvas.drawText(titleView.getText().toString(), AppConstantS.FINAL_GIF_WIDTH / 2, 44 + tp.getTextSize()/2, tp);
 		}
 		for (int i = 0; i < Util.gmList.size(); i++) {
@@ -486,14 +482,11 @@ public class StoryEditActivity extends Activity{
 				tp.setTextSize(30);
 				tp.setTypeface(mFace);
 				tp.setShadowLayer(5, 0, 0, Color.BLACK);
-				//tp.setTextAlign(Align.CENTER);
-				//
+				
 				StaticLayout layout = new StaticLayout(Util.gmList.get(i).getBotWord(), tp, AppConstantS.FINAL_GIF_WIDTH, Alignment.ALIGN_CENTER, 1.0F, 0.0F, true);
 				canvas.translate(0, titleHeight + AppConstantS.FINAL_GIF_HEIGHT * (i+1)-layout.getHeight()-20);
 				layout.draw(canvas);
 				canvas.translate(0, -(titleHeight + AppConstantS.FINAL_GIF_HEIGHT * (i+1)-layout.getHeight()-20));
-				//
-				//canvas.drawText(Util.gmList.get(i).getBotWord(), AppConstantS.FINAL_GIF_WIDTH / 2, titleHeight+320 + AppConstantS.FINAL_GIF_HEIGHT * i, tp);
 			}
 			
 			//画上边框
@@ -501,52 +494,42 @@ public class StoryEditActivity extends Activity{
 			Rect dsRectborder = new Rect(0, titleHeight+AppConstantS.FINAL_GIF_HEIGHT * i,
 					backgroundbitm.getWidth(), titleHeight+AppConstantS.FINAL_GIF_HEIGHT * i + backgroundbitm.getHeight());
 			canvas.drawBitmap(borderbitm, null, dsRectborder, paint); 
-			//drawable.draw(canvas); 
-			//canvas.drawBitmap(backgroundbitm, null, dsRect, paint);
 		}
 		Bitmap authorbitm = Util.getImageFromAssetFile(this, AppConstantS.GIFBG_FOLDERNAME, "bg_author.png");
 		Rect dstReckauthor = new Rect(0, AppConstantS.FINAL_GIF_HEIGHT * Util.gmList.size()+88, AppConstantS.FINAL_GIF_WIDTH, AppConstantS.FINAL_GIF_HEIGHT * Util.gmList.size()+176);
 		canvas.drawBitmap(authorbitm, null, dstReckauthor, paint);
-	//	int authorHeight = authorbitm.getHeight();
 		if (authorView.getText().toString() != null) {
-			//Typeface mFace = Typeface.createFromAsset(this.getAssets(), "fonts/fangzhengjianzhi.ttf");
 			TextPaint tp = new TextPaint(Paint.ANTI_ALIAS_FLAG);
 			tp.setFilterBitmap(true);
 			tp.setColor(getResources().getColor(color.author_grey));
 			tp.setTextSize(20);			
-			//tp.setTypeface(mFace);
-			//tp.setShadowLayer(5, 0, 0, Color.BLACK);
 			tp.setTextAlign(Align.LEFT);
 			canvas.drawText(authorView.getText().toString(), 10, AppConstantS.FINAL_GIF_HEIGHT * Util.gmList.size()+88+30, tp);
 		}
 		Log.v(TAG, "结束合成第n张：" + frame);		
 		return drawBit;
 	}
-   
+	
+	JpgToGif j2g;
     public void picsToGif() {
+    	Bitmap[] bits = new Bitmap[AppConstantS.GIF_FRAMECOUNT];
+		for (int i = 0; i < bits.length; i++) {
+			bits[i] = matchPic(Util.head, Util.body[i],i);;
+		}	
+		if(j2g==null) {
+			j2g = new JpgToGif(this.handler);
+		}
+		j2g.startJpgToGif();
+		//存放路径
 		String path = Util.getAppStorePath() +  File.separator+AppConstantS.GIF_STORENAME;
 		try {
-			AnimatedGifEncoder1 e = new AnimatedGifEncoder1();
-			e.setRepeat(0);
-			e.start(path);
-			
-			for (int i = 0; i < AppConstantS.GIF_FRAMECOUNT; i++) {
-		        System.out.println("发送消息了StoryEdtit");
-				// 设置播放的延迟时间
-				e.setDelay(100);
-				
-				e.addFrame(matchPic(Util.head[i], Util.body[i],i)); // 添加到帧中
-				// pic[i].recycle();
-				Message msg = new Message();  
-		        msg.what = 10;  
-		        handler.sendMessage(msg); 
-			}
-			e.finish();
-			// 参数为,images和存储的目标路径
-			Log.v(TAG, "制作Gif完毕，图片被保存入：" + path);
+			j2g.jpgToGif(bits, path);
 		} catch (Exception e) {
-			Log.v(TAG, "制作Gif失败了,请检查StoryEditActivity");
 			e.printStackTrace();
+		}
+		//销毁
+		for (int i = 0; i < bits.length; i++) {
+			bits[i].recycle();
 		}
 	}
    
@@ -572,7 +555,9 @@ public class StoryEditActivity extends Activity{
 			}
 			return result;
 		}
-
+		
+	
+		
 		@Override
 		protected void onPostExecute(Boolean result) {
 			super.onPostExecute(result);
@@ -589,6 +574,21 @@ public class StoryEditActivity extends Activity{
 			in.putExtra(AppConstantS.FROM_ACTIVITY_NAME, StoryEditActivity.this.getClass().getName());
 			StoryEditActivity.this.startActivity(in);
 		}
+		
+		@Override
+		protected void onCancelled() {
+			super.onCancelled();
+			//停止异步线程
+			j2g.stopJpgToGif();
+			if(makeGifTimeDialog!=null) {			
+				makeGifTimeDialog.setProgress(0);
+				makeGifTimeDialog.dismiss();
+				//恢复右键功能
+				if(!topbar_btnRight.isClickable()) {
+					topbar_btnRight.setClickable(true);
+				}
+			}
+		}
 	}
     
     public boolean onKeyDown(int keyCode, KeyEvent event) {
@@ -601,15 +601,12 @@ public class StoryEditActivity extends Activity{
     
     private void clearData() {
     	//暂时定为：退出时清空所保存数据
-		curGifNum = 0;
+		curGifNum = 1;
 		if(picList!=null) {
 			picList.clear();
-			System.out.println("已经清空");
-			//picList=null;
 		}
 		if(mainLayout!=null) {
 			mainLayout.removeAllViews();
-			//mainLayout=null;
 		}
 		if(Util.gmList!=null) {
 			Util.gmList.clear();
@@ -623,19 +620,11 @@ public class StoryEditActivity extends Activity{
     Handler handler = new Handler() {
 		@Override
 		public void handleMessage(Message msg) {
-			Log.v(TAG, "handerler线程收到消息" + msg);
 			super.handleMessage(msg);
 			switch (msg.what) {
-				case 10:
-					if(count==100) {
-						count = 0;
-					}
-					count = count + 11; 
-					if(count==99) {
-						count = count + 1;
-					}
-					makeGifTimeDialog.setProgress(count);
-	            	break; 
+				case MATCH_A_FRAME:
+					makeGifTimeDialog.setProgress(j2g.getCurFrameNum()*11);
+				break; 
 		    }  
 			super.handleMessage(msg);      
 		}

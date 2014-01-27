@@ -75,6 +75,7 @@ import com.tencent.mm.sdk.openapi.WXAPIFactory;
 import com.tencent.mm.sdk.openapi.WXEmojiObject;
 import com.tencent.mm.sdk.openapi.WXMediaMessage;
 import com.umeng.analytics.MobclickAgent;
+import com.weibo.sdk.android.api.WeiboAPI.COUNT_TYPE;
 
 public class PicEditActivity extends Activity implements OnClickListener {
 
@@ -126,7 +127,7 @@ public class PicEditActivity extends Activity implements OnClickListener {
 	private Bitmap bodyBitm;
 	private Button changehead;	//选择头部按钮
 	private Button changebody;	//选择身子按钮
-	private Button changeframe;	//选择边框按钮
+	//private Button changeframe;	//选择边框按钮
 	
 	HorizontalScrollView chsHeadHsv;//头部的1级菜单父容器
 	LinearLayout chsHeadLay;	//头部1级菜单子容器
@@ -143,8 +144,8 @@ public class PicEditActivity extends Activity implements OnClickListener {
 	private TextView gifShowWord;
 	private File mPhotoFile;//拍照后保存的照片文件
 	private String mPhotoPath;//拍照后保存的文件路径
-	private ImageView help_hand1;
-	private ImageView help_hand2;
+	private ImageView help_hand1;//帮助手势图1
+	private ImageView help_hand2;//帮助手势图2
 	
 	private IWXAPI mmAPI;
 	private int curGifNumini = -1;
@@ -155,15 +156,16 @@ public class PicEditActivity extends Activity implements OnClickListener {
 	ImageView gifHead;
 	GifView gifBody;
 	Context context;
-	GifModel gm = new GifModel();
-	ProgressDialog makeGifTimeDialog;//动图生成时的进度条
-	int count = 0; //动图生成时的进度数
+	GifModel gm = new GifModel();//如果是故事模式跳转,用次MODEL存储当前信息
 	
-	boolean isFromPicShareActivity = false;	
+	private ProgressDialog makeGifTimeDialog;//动图生成时的进度条
 	private boolean isFromStoryMode = false;//是否来自故事模式 
-	private boolean isEdit = false;	//是否来自编辑模式 
+	private boolean isEdit = false;	//是否来自当前图模式 
 	private int curGifNum; 	//当前编辑的图片序号
 	MakeGifTask mgTask;//合成图片的异步任务
+	JpgToGif j2g;//jpg用来合成gif的类
+	AlertDialog ad; //点击照相后弹出
+	int count = 1;//接到了拼接第几(count)张图片完成的消息
 	@Override
 	public void onNewIntent(Intent intent) {
 		super.onNewIntent(intent);
@@ -174,19 +176,18 @@ public class PicEditActivity extends Activity implements OnClickListener {
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.picedit);
-		System.out.println("oncreate!");
+	
 		bundle = getIntent().getExtras();
 		//判断来自哪个ACTIVITY
 		if(bundle.getString(AppConstantS.FROM_ACTIVITY_NAME).equals(StoryEditActivity.class.getName())) {
 			isFromStoryMode = true;
 			curGifNum = bundle.getInt(AppConstantS.STORY_GIF_NUM);
-			
 			if (bundle.getInt(AppConstantS.STORY_MODE)==StoryEditActivity.STORY_EDIT) {
+				//来自故事模式的编辑模式
 				isEdit = true;
 			}
-		}else if(bundle.getString(AppConstantS.FROM_ACTIVITY_NAME).equals(PicShareActivity.class.getName())){
-			isFromPicShareActivity= true;
-			gifBody.restartGifAnimation();
+		} else {
+			//gifBody.restartGifAnimation();
 		}	
 		
 		context = this;
@@ -202,97 +203,65 @@ public class PicEditActivity extends Activity implements OnClickListener {
 		MyGestureListener.finalRight = 0;
 		MyGestureListener.finalBottom = 0;
 		//初始状态设定
-		int inihead;
-		int inibody;
 		int left;
 		int right;
 		int top;
 		int bottom;
-		
-		if (isFromStoryMode){			
-			//故事模式
-			if(isEdit){
-				//编辑模式
-				curGifNumini=curGifNum;
-			}else{
-				//插入模式
-				if (curGifNum != 0){
-					//采用上一张的
-					curGifNumini=curGifNum-1;
-				}
-			}
-		}
-		if (curGifNumini == -1){
-			//采用默认设置
+	
+		if(!isEdit) {
 			ranChsPic();
-		}else{
-			System.out.println("记忆设计");
-			//采用记忆设置
-			inihead = Util.gmList.get(curGifNumini).getHead();
-			inibody = Util.gmList.get(curGifNumini).getBody();
+		} else{
+			Util.curShowingHead = Util.gmList.get(curGifNum).getHead();
+			Util.curShowingBody = Util.gmList.get(curGifNum).getBody();
 			gifHead = (ImageView) findViewById(R.id.edit_head);
 			gifHead.setImageBitmap(Util.getImageFromAssetFile(this, "head",
-					"head"+inihead+".png"));
-			for (int i = 0;i < AppConstantS.GIF_FRAMECOUNT;i++) {
-				Util.head[i] = Util.getImageFromAssetFile(this, AppConstantS.HEADNAME
-						,AppConstantS.HEADNAME + inihead + AppConstantS.PNG_ENDNAME);
-			}
+					"head"+Util.curShowingHead+".png"));
+			Util.head = Util.getImageFromAssetFile(this, AppConstantS.HEADNAME
+					,AppConstantS.HEADNAME + Util.curShowingHead + AppConstantS.PNG_ENDNAME);
 			gifBody = (GifView) findViewById(R.id.edit_body);
-			//gifBody.setScaleType(ScaleType.CENTER);
-		
-			gifBody.setGifImage(Util.getInputStreamFromAsset(this, "body"+inibody,
+			gifBody.setGifImage(Util.getInputStreamFromAsset(this, "body"+Util.curShowingBody,
 					"gif"+AppConstantS.GIF_ENDNAME));
-			Util.curShowingHead = inihead;
-			Util.curShowingBody = inibody;
-			if (isEdit){
-				//以记忆参数初始化移动与缩放
-				int widthini = devWid-devWid/10;
-				int heightini = (devWid-devWid/10)*AppConstantS.FINAL_GIF_HEIGHT/AppConstantS.FINAL_GIF_WIDTH;
-				//Log.v(TAG,"ini width height"+right+bottom);
-				RelativeLayout.LayoutParams setLayoutParams = new LayoutParams((int) widthini, (int) heightini);
-				float inileft = Util.gmList.get(curGifNumini).getLeft();
-				float iniright = Util.gmList.get(curGifNumini).getRight();
-				Log.v(TAG,"ini width height"+inileft+iniright);
-				if (inileft != iniright){
-					float initop = Util.gmList.get(curGifNumini).getTop();
-					float inibottom = Util.gmList.get(curGifNumini).getBottom();
-					left = (int)(inileft*widthini);
-					top = (int)(initop*heightini);
-					right = (int)(widthini-iniright*widthini);
-					bottom = (int)(heightini-inibottom*heightini);
-					Log.v(TAG,"ini num"+curGifNumini);
-					Log.v(TAG,"ini margin"+left+top+right+bottom+inileft+initop+iniright+inibottom);
-					setLayoutParams.width = widthini-left-right;
-					setLayoutParams.height = heightini-top-bottom;
-					setLayoutParams.setMargins(left, top, right, bottom);
-					gifHead.setLayoutParams(setLayoutParams);
-					gifBody.setLayoutParams(setLayoutParams);
-					//初始化移动和缩放参数
-					MyGestureListener.finalLeft = inileft;
-					MyGestureListener.finalTop = initop;
-					MyGestureListener.finalRight = iniright;
-					MyGestureListener.finalBottom = inibottom;				
-				}							
-			}
+		
+			//以记忆参数初始化移动与缩放
+			int widthini = devWid-devWid/10;
+			int heightini = (devWid-devWid/10)*AppConstantS.FINAL_GIF_HEIGHT/AppConstantS.FINAL_GIF_WIDTH;
+			//Log.v(TAG,"ini width height"+right+bottom);
+			RelativeLayout.LayoutParams setLayoutParams = new LayoutParams((int) widthini, (int) heightini);
+			float inileft = Util.gmList.get(curGifNum).getLeft();
+			float iniright = Util.gmList.get(curGifNum).getRight();
+			
+			if (inileft != iniright){
+				float initop = Util.gmList.get(curGifNum).getTop();
+				float inibottom = Util.gmList.get(curGifNum).getBottom();
+				
+				left = (int)(inileft*widthini);
+				top = (int)(initop*heightini);
+				right = (int)(widthini-iniright*widthini);
+				bottom = (int)(heightini-inibottom*heightini);
+				
+				setLayoutParams.width = widthini-left-right;
+				setLayoutParams.height = heightini-top-bottom;
+				setLayoutParams.setMargins(left, top, right, bottom);
+				gifHead.setLayoutParams(setLayoutParams);
+				gifBody.setLayoutParams(setLayoutParams);
+				//初始化移动和缩放参数
+				MyGestureListener.finalLeft = inileft;
+				MyGestureListener.finalTop = initop;
+				MyGestureListener.finalRight = iniright;
+				MyGestureListener.finalBottom = inibottom;				
+			}	
 		}
-		//gifHead.setGifImageType(GifImageType.COVER);
-		//gifHead.setLoopAnimation();
 		gifBody.setGifImageType(GifImageType.COVER);
 		gifBody.setLoopAnimation();
 		
-
-		
 		//帮助动画
-		SharedPreferences preferences;
-		SharedPreferences.Editor editors;
-		preferences = getSharedPreferences("help_showtimes", Context.MODE_PRIVATE);
-		editors = preferences.edit();
-		int times = preferences.getInt("times", 0);
-		Log.v(TAG,"times1:"+times);
+		SharedPreferences preferences = getSharedPreferences("help_showtimes", Context.MODE_PRIVATE);
+		SharedPreferences.Editor editors = preferences.edit();
+		//Util.helptimes 进入次页面却没有在使用的次数
 		help_hand1 = (ImageView) findViewById(R.id.help_anim_hand1);
 		help_hand2 = (ImageView) findViewById(R.id.help_anim_hand2);
-		if (times==0 || times>=5){
-			Log.v(TAG,"times2:"+times);
+
+		if (Util.helpNoUse==0 || Util.helpNoUse>=10){
 			Animation helpAnim1 = AnimationUtils.loadAnimation(this, R.anim.help_translation_1);
 			Animation helpAnim2 = AnimationUtils.loadAnimation(this, R.anim.help_translation_2);
 			Animation helpAnim3 = AnimationUtils.loadAnimation(this, R.anim.help_translation_3);
@@ -300,36 +269,34 @@ public class PicEditActivity extends Activity implements OnClickListener {
 			helpAnim1.setAnimationListener(new Animation.AnimationListener(){
 				public void onAnimationEnd(Animation animation) {
 					// TODO Auto-generated method stub
-					help_hand1.setVisibility(View.INVISIBLE);
-					help_hand2.setVisibility(View.INVISIBLE);
+					help_hand1.setVisibility(View.GONE);
+					help_hand2.setVisibility(View.GONE);
 				}
-	
-				public void onAnimationRepeat(Animation animation) {
-				}
-	
-				public void onAnimationStart(Animation animation) {
-				}});
+				public void onAnimationStart(Animation animation) {}
+				public void onAnimationRepeat(Animation animation) {}
+			});
 			help_hand1.startAnimation(helpAnim1);
 			help_hand2.startAnimation(helpAnim2);
 			gifHead.startAnimation(helpAnim3);
 			gifBody.startAnimation(helpAnim4);
-			times = 0;			
+			//使用过一次后，默认在规定次数内不再使用
+			Util.helpNoUse = 1;
 		}else{
 			help_hand1.setVisibility(View.INVISIBLE);
 			help_hand2.setVisibility(View.INVISIBLE);
 		}
-		times = times +1;
-		editors.putInt("times", times);
-		editors.commit();
-		Log.v(TAG,"times3:"+preferences.getInt("times", 0));
+		Util.helpNoUse ++;
+		System.out.println("oncreate!");
 	}
+
 	
 	@Override
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 		super.onActivityResult(requestCode, resultCode, data);
-		//直接点返回键
-		if(resultCode==0) {
-			return;
+		System.out.println(gifBody.animationRun);
+		//从表情--》分享--》表情  
+		if(requestCode==AppConstantS.EMOJ_TO_GIFSHARE && resultCode==AppConstantS.GIFSHARE_B_EMOJ) {
+			System.out.println("GifShare B PicEdit");
 		}
 		//拍照
 		if (requestCode == TAKE_PHOTO) {
@@ -361,6 +328,7 @@ public class PicEditActivity extends Activity implements OnClickListener {
 				Util.background = bitmap;
 			}  
         }  
+		System.out.println(gifBody.animationRun);
 	}
 	
 	//初始化数据
@@ -380,7 +348,6 @@ public class PicEditActivity extends Activity implements OnClickListener {
 	private void initButton() {
 		gifHead = (ImageView)findViewById(R.id.edit_head);
 		gifBody = (GifView) findViewById(R.id.edit_body);
-		
 		// 初始化topbar右边按钮
 		topbar_btnRight = (Button) findViewById(R.id.topbar_btn_right);
 		if (isFromStoryMode){
@@ -405,33 +372,54 @@ public class PicEditActivity extends Activity implements OnClickListener {
 		ibCam = (Button)this.findViewById(R.id.camera);
 		ibCam.setOnClickListener(new OnClickListener() {
 			public void onClick(View v) {
-				AlertDialog a = new AlertDialog.Builder(PicEditActivity.this)
-				.setTitle("选择")
-				.setCancelable(true)
-				.setPositiveButton("相册",new DialogInterface.OnClickListener() {
-					public void onClick(DialogInterface dialog, int whichButton) {
-						
-						Intent intent = new Intent(Intent.ACTION_GET_CONTENT);  
-				        intent.setType("image/*");  
-				        startActivityForResult(intent, CHS_PHOTO);  
-					}
-				}).setNegativeButton("拍照", new DialogInterface.OnClickListener() {
-					public void onClick(DialogInterface dialog, int whichButton) {
-						try {
-							Intent intent = new Intent("android.media.action.IMAGE_CAPTURE");
-							mPhotoPath = AppConstantS.CAMPIC_ROOT + Util.getPhotoFileName();
-							mPhotoFile = new File(AppConstantS.CAMPIC_ROOT + Util.getPhotoFileName());
-							if (!mPhotoFile.exists()) {
-								mPhotoFile.createNewFile();
-							}
-							intent.putExtra(MediaStore.EXTRA_OUTPUT, Uri.fromFile(mPhotoFile));
-							startActivityForResult(intent, TAKE_PHOTO);
-						} catch (Exception e) {
-							Log.v(TAG,"系统照相过程出错,原因：" + e.getMessage());
+				if(ad==null) {
+					 ad = new AlertDialog.Builder(PicEditActivity.this)
+					.setTitle("选择")
+					.setCancelable(true)
+					.setPositiveButton("相册",new DialogInterface.OnClickListener() {
+						public void onClick(DialogInterface dialog, int whichButton) {
+							
+							Intent intent = new Intent(Intent.ACTION_GET_CONTENT);  
+					        intent.setType("image/*");  
+					        startActivityForResult(intent, CHS_PHOTO);  
 						}
-					}
-				}).create();
-				a.show();
+					})
+//					.setNeutralButton("唠儿图", new DialogInterface.OnClickListener() {
+//						public void onClick(DialogInterface dialog, int which) {
+//							ad.cancel();
+//							// 当点击身子按钮操作为：关闭--〉打开
+//							// 1、改变身子按钮TAG属性为打开
+//							// 2、 显示第一行身子菜单
+//							//changeframe.setBackgroundResource(R.drawable.picedit_toolbar_btn_changebody_pressed);
+//							//changeframe.setTag(BUTTON_OPEN);
+//							chsFrameHsv.setVisibility(View.VISIBLE);
+//							// 3、 如果此时头或身子部菜单为打开状态
+//							closeChangeBody();
+//							closeChangeHead();
+//							// 4、清除之前身子相关按钮的选中状态
+//							cancelLayer1BodyChs();
+//							cancelLayer2ChsState();
+//						}
+//					})
+					.setNegativeButton("拍照", new DialogInterface.OnClickListener() {
+						public void onClick(DialogInterface dialog, int whichButton) {
+							try {
+								Intent intent = new Intent("android.media.action.IMAGE_CAPTURE");
+								mPhotoPath = AppConstantS.CAMPIC_ROOT + Util.getPhotoFileName();
+								mPhotoFile = new File(AppConstantS.CAMPIC_ROOT + Util.getPhotoFileName());
+								if (!mPhotoFile.exists()) {
+									mPhotoFile.createNewFile();
+								}
+								intent.putExtra(MediaStore.EXTRA_OUTPUT, Uri.fromFile(mPhotoFile));
+								startActivityForResult(intent, TAKE_PHOTO);
+							} catch (Exception e) {
+								Log.v(TAG,"系统照相过程出错,原因：" + e.getMessage());
+							}
+						}
+					})
+					.setCancelable(true).create();
+				}
+				ad.show();
 			}
 		});
 
@@ -453,6 +441,8 @@ public class PicEditActivity extends Activity implements OnClickListener {
 		addWord = (Button) this.findViewById(R.id.addword);		
 		addWord.setOnClickListener(new OnClickListener() {
 			public void onClick(View v) {
+				//暂停动画
+				gifBody.pauseGifAnimation();
 				final View addWordDig = getLayoutInflater().inflate(R.layout.addword_dialog, null);
 				final EditText gifEditWord = (EditText) addWordDig.findViewById(R.id.gif_editword);
 				gifEditWord.setFilters(new InputFilter[]{new InputFilter.LengthFilter(30)});
@@ -468,10 +458,11 @@ public class PicEditActivity extends Activity implements OnClickListener {
 					public void onClick(DialogInterface dialog, int whichButton) {
 						//刷新显示gif_showword的ui
 						gifShowWord.setText(gifEditWord.getText().toString());
+						gifBody.restartGifAnimation();
 					}
 				}).setNegativeButton("取消", new DialogInterface.OnClickListener() {
 					public void onClick(DialogInterface dialog, int whichButton) {
-						//Toast.makeText(PicEditActivity.this, "dialogcancel", Toast.LENGTH_LONG).show();
+						gifBody.restartGifAnimation();
 					}
 				}).create();
 				aDlg.show();
@@ -499,14 +490,14 @@ public class PicEditActivity extends Activity implements OnClickListener {
 		// 选择头部和身子的按钮
 		changehead = (Button) this.findViewById(R.id.changehead);
 		changebody = (Button) this.findViewById(R.id.changebody);
-		changeframe = (Button) this.findViewById(R.id.changeframe);
+		//changeframe = (Button) this.findViewById(R.id.changeframe);
 		//头和身子1级菜单 ，因为SCROLLVIEW里无法放多个子类，因此先放一个LINEARLAYOUT再放子类
 		chsHeadHsv= (HorizontalScrollView)this.findViewById(R.id.head_chs_list);
 		chsBodyHsv= (HorizontalScrollView)this.findViewById(R.id.body_chs_list);
-		chsFrameHsv = (HorizontalScrollView)this.findViewById(R.id.frame_chs_list);
+		chsFrameHsv = (HorizontalScrollView)this.findViewById(R.id.bg_chs_list);
 		chsHeadLay = (LinearLayout)findViewById(R.id.headchslayout);
 		chsBodyLay = (LinearLayout)this.findViewById(R.id.bodychslayout);
-		chsFrameLay = (LinearLayout)this.findViewById(R.id.framechslayout);
+		chsFrameLay = (LinearLayout)this.findViewById(R.id.bgchslayout);
 		//头部和身子的2级菜单
 		chsHeadBodyLay2 = (LinearLayout) this.findViewById(R.id.headbody_chs_lay2);
 		chsHeadBodyLay2.setVisibility(View.INVISIBLE);
@@ -528,11 +519,10 @@ public class PicEditActivity extends Activity implements OnClickListener {
 		// 以两个按钮ID记录两个按钮的开关属性，初始默认关闭，点击后开启并改变按钮ID
 		changehead.setTag(BUTTON_CLOSE);
 		changebody.setTag(BUTTON_CLOSE);
-		changeframe.setTag(BUTTON_CLOSE);
+		//changeframe.setTag(BUTTON_CLOSE);
 		// 头身按钮点击初始化
 		initChangeHeadBtn();
 		initChangeBodyBtn();
-		initChangeFrameBtn();
 		// 1级头身菜单初始化
 		initHeadBodyLayer1Btn(AppConstantS.HEADNAME,headLayer1num);
 		initHeadBodyLayer1Btn(AppConstantS.BODYNAME,bodyLayer1num);
@@ -564,6 +554,7 @@ public class PicEditActivity extends Activity implements OnClickListener {
 				Log.v(TAG, "gesture pointer count:"+event.getPointerCount());
 				chsHeadHsv.setVisibility(View.INVISIBLE);
 				chsBodyHsv.setVisibility(View.INVISIBLE);
+				chsFrameHsv.setVisibility(View.INVISIBLE);
 				chsHeadBodyLay2.setVisibility(View.INVISIBLE);
 				changehead.setTag(BUTTON_CLOSE);
 				changehead.setBackgroundResource(R.drawable.picedit_toolbar_btn_changehead_nor);
@@ -588,7 +579,7 @@ public class PicEditActivity extends Activity implements OnClickListener {
 					chsHeadHsv.setVisibility(View.VISIBLE);
 					// 3、关掉身子和背景的选择菜单
 					closeChangeBody();
-					closeChangeFrame();
+					chsFrameHsv.setVisibility(View.INVISIBLE);
 					// 4、清除之前头部相关按钮的选中状态
 					cancelLayer1HeadChs();
 					cancelLayer2ChsState();
@@ -618,10 +609,9 @@ public class PicEditActivity extends Activity implements OnClickListener {
 					changebody.setBackgroundResource(R.drawable.picedit_toolbar_btn_changebody_pressed);
 					changebody.setTag(BUTTON_OPEN);
 					chsBodyHsv.setVisibility(View.VISIBLE);
-					
 					// 3、 如果此时头和身子菜单为打开状态
 					closeChangeHead();
-					closeChangeFrame();
+					chsFrameHsv.setVisibility(View.INVISIBLE);
 					// 4、清除之前头和身子相关按钮的选中状态
 					cancelLayer1BodyChs();
 					cancelLayer2ChsState();
@@ -634,40 +624,6 @@ public class PicEditActivity extends Activity implements OnClickListener {
 					chsBodyHsv.setVisibility(View.INVISIBLE);
 					chsHeadBodyLay2.setVisibility(View.INVISIBLE);
 					changebody.setBackgroundResource(R.drawable.picedit_toolbar_btn_changebody_nor);
-					gifBody.restartGifAnimation();
-				}
-			}
-		});
-	}
-	
-	//背景菜单初始化
-	private void initChangeFrameBtn() {
-		// 身子菜单按钮的事件
-		changeframe.setOnClickListener(new OnClickListener() {
-			public void onClick(View v) {
-				if ((Integer) v.getTag() == BUTTON_CLOSE) {
-					// 当点击身子按钮操作为：关闭--〉打开
-					// 1、改变身子按钮TAG属性为打开
-					// 2、 显示第一行身子菜单
-					changeframe.setBackgroundResource(R.drawable.picedit_toolbar_btn_changebody_pressed);
-					changeframe.setTag(BUTTON_OPEN);
-					chsFrameHsv.setVisibility(View.VISIBLE);
-					
-					// 3、 如果此时头或身子部菜单为打开状态
-					closeChangeBody();
-					closeChangeHead();
-					// 4、清除之前身子相关按钮的选中状态
-					cancelLayer1BodyChs();
-					cancelLayer2ChsState();
-				} else {
-					// 当点击身子按钮操作为：打开--〉关闭
-					// １、点击后，关闭两行身子菜单
-					// ２、设置身子按钮ＴＡＧ属性为关闭
-					// ３、重启身子的动画
-					changeframe.setTag(BUTTON_CLOSE);
-					chsFrameHsv.setVisibility(View.INVISIBLE);
-					chsHeadBodyLay2.setVisibility(View.INVISIBLE);
-					changeframe.setBackgroundResource(R.drawable.picedit_toolbar_btn_changebody_nor);
 					gifBody.restartGifAnimation();
 				}
 			}
@@ -698,20 +654,8 @@ public class PicEditActivity extends Activity implements OnClickListener {
 		}
 	}
 	
-	private void closeChangeFrame() {
-		// 3、 如果此时背景菜单为打开状态
-		// （１）设置背景按钮ＴＡＧ属性为关闭
-		// （２）隐藏头部的两个菜单
-		if ((Integer) changeframe.getTag() == BUTTON_OPEN) {
-			changeframe.setTag(BUTTON_CLOSE);
-			chsFrameHsv.setVisibility(View.INVISIBLE);
-			changeframe.setBackgroundResource(R.drawable.picedit_toolbar_btn_changehead_nor);
-		}
-	}
-	
 	//初始化头和身子第一层按钮和对应点击事件,count为菜单包含的选项数
 	private void initHeadBodyLayer1Btn(final String s,int layer1num) {
-		System.out.println("string"+s);
 		//遍历初始化1级菜单的每一个按钮
 		for(int i=0;i<layer1num;i++) {
 			//1、计算其对应的图片编号
@@ -768,8 +712,6 @@ public class PicEditActivity extends Activity implements OnClickListener {
 			
 			//5、判断是头部菜单和是身子菜单，设置自身对应编号的图片，将自身ADDVIEW进1级菜单的相应位置
 			if(s.equals(AppConstantS.HEADNAME)) {
-				System.out.println("width"+Util.getImageFromAssetFile(context,
-						AppConstantS.HEADCHSBTN_FILENAME,AppConstantS.HEADNAME + num + AppConstantS.PNG_ENDNAME).getWidth());
 				siv.setImageBitmap(Util.getImageFromAssetFile(context,
 					AppConstantS.HEADCHSBTN_FILENAME,AppConstantS.HEADNAME + num + AppConstantS.PNG_ENDNAME));
 				chsHeadLay.addView(picLayout,i);
@@ -814,10 +756,9 @@ public class PicEditActivity extends Activity implements OnClickListener {
 						gifHead.setImageBitmap(Util.getImageFromAssetFile(context, "head", "head" + ((Integer)v.getTag()) + ".png"));
 						Util.curShowingHead = ((Integer)v.getTag());
 					
-						for (int i = 0;i < AppConstantS.GIF_FRAMECOUNT;i++) {
-							Util.head[i] = Util.getImageFromAssetFile(PicEditActivity.this,
-									"head", "head" + ((Integer)v.getTag()) + ".png");
-						}
+						Util.head = Util.getImageFromAssetFile(PicEditActivity.this,
+							AppConstantS.HEADNAME, AppConstantS.HEADNAME + ((Integer)v.getTag()) + AppConstantS.PNG_ENDNAME);
+						
 						gifBody.restartGifAnimation();
 					}
 					//身子二级菜单
@@ -862,10 +803,9 @@ public class PicEditActivity extends Activity implements OnClickListener {
 				"head", "head" + Util.curShowingHead + ".png"));
 		gifBody.setGifImage(Util.getInputStreamFromAsset(context,
 				AppConstantS.BODYNAME + Util.curShowingBody,  "gif"+ AppConstantS.GIF_ENDNAME));
-		for (int i = 0;i < AppConstantS.GIF_FRAMECOUNT;i++)	{
-			Util.head[i] = Util.getImageFromAssetFile(context,AppConstantS.HEADNAME, 
+		
+		Util.head = Util.getImageFromAssetFile(context,AppConstantS.HEADNAME, 
 				AppConstantS.HEADNAME+Util.curShowingHead + AppConstantS.PNG_ENDNAME);
-		}
 	}
 	
 	// 后台线程处理点击事件和摇动操作
@@ -879,12 +819,31 @@ public class PicEditActivity extends Activity implements OnClickListener {
 					Log.v(TAG, "编辑页面中，用户在摇动手机，正在执行随机为用户选图");
 					ranChsPic();
 					//摇一摇的声音
-					MediaPlayer mp = MediaPlayer.create(PicEditActivity.this, R.raw.shake);
-					mp.start();
+					((android.os.Vibrator)PicEditActivity.this.getApplication().getSystemService(VIBRATOR_SERVICE)).vibrate(new long[]{500,200}, -1); 
 					break;
 					
 				case MATCH_A_FRAME:
-					makeGifTimeDialog.setProgress(j.getCurFrameNum()*11);
+					System.out.println("getProgress"+makeGifTimeDialog.getProgress());
+					if(!j2g.getFlag()) {
+						count=1;
+						makeGifTimeDialog.setProgress(0);
+						if(!topbar_btnRight.isClickable()) {
+							topbar_btnRight.setClickable(true);
+						}
+						gifBody.restartGifAnimation();
+						return;
+					}
+					makeGifTimeDialog.setProgress(count*11);
+					count++;
+					//把跳转放在这里以便进度条显示更准确
+					if(count==(AppConstantS.GIF_FRAMECOUNT+1)) {
+						count=1;
+						makeGifTimeDialog.setProgress(0);
+						makeGifTimeDialog.dismiss();
+						Intent in = new Intent(PicEditActivity.this,PicShareActivity.class);
+						in.putExtra(AppConstantS.FROM_ACTIVITY_NAME, PicEditActivity.this.getClass().getName());
+						startActivityForResult(in, AppConstantS.EMOJ_TO_GIFSHARE);
+					}
 					break; 
 					
 				case OUTPUT_KEYBOARD:
@@ -942,15 +901,12 @@ public class PicEditActivity extends Activity implements OnClickListener {
 			right = (int)(finalRightbitm*right);
 			bottom = (int)(finalBottombitm*bottom);
 		}
-		//Log.v(TAG, "位移及缩放参数"+finalLeftbitm+" "+finalTopbitm+" "+right+" "+bottom+" "+scalebitm);
 		
 		Rect dstRect = new Rect(left, top, right, bottom);
 		Rect srcRect = new Rect(0, 0, headBitm.getWidth(), headBitm.getHeight());
 		canvas.drawBitmap(headBitm, srcRect, dstRect, paint);
-
 		
 		// 画上身子,设定顶部起始位
-		//top = top + headbitm.getHeight() - AppConstantS.headAndBodyOverLap;
 		bodyBitm = body;
 		dstRect = new Rect(left, top, right, bottom);
 		srcRect = new Rect(0, 0, bodyBitm.getWidth(), bodyBitm.getHeight());
@@ -961,77 +917,80 @@ public class PicEditActivity extends Activity implements OnClickListener {
 			Typeface mFace = Typeface.createFromAsset(this.getAssets(), "fonts/fangzhengjianzhi.ttf");
 			TextPaint tp = new TextPaint(Paint.ANTI_ALIAS_FLAG);
 			tp.setFilterBitmap(true);
-			//tp.setColor(Color.rgb(8, 98, 104));
 			tp.setColor(Color.WHITE);
 			tp.setTextSize(30);
 			tp.setTypeface(mFace);
-			//tp.setFakeBoldText(true);
 			tp.setShadowLayer(5, 0, 0, Color.BLACK);
 		
 			StaticLayout layout = new StaticLayout(gifShowWord.getText().toString(), tp, AppConstantS.FINAL_GIF_WIDTH, Alignment.ALIGN_CENTER, 1.0F, 0.0F, true);
 			canvas.translate(0, AppConstantS.FINAL_GIF_HEIGHT-layout.getHeight()-20);
 			
-	
 			layout.draw(canvas);
 			Log.v(TAG, "有文字拼接部分完成");
 		}
 		return drawBit;
 	}
 
-	private void matchPicsFromCurStaticPicStory() {
-		Log.v(TAG, "执行makeImages,获取当前展示的头和身子,获取他们的多张静态图片,进行多次的拼接(makeimage)");
+	//为故事模式记录当前编辑或插入的图片,返回
+	private void recordForStoryMode() {
 		Bitmap image =Bitmap.createBitmap(320, 350, Bitmap.Config.ARGB_8888);
-		System.out.println("makestory");
-		try {
-			
-			image = matchPic(Util.head[0], Util.body[0]);
-			if (isEdit) {
-				Util.gmList.get(curGifNum).setBitmap(image);
-			}else{
-				gm.setBitmap(image);
-			}			
-		} catch (Exception e) {
-			Log.v(TAG, "执行makeImages失败");
-			e.printStackTrace();
-		}				
+		image = matchPic(Util.head, Util.body[0]);
+		if (isEdit) {
+			Util.gmList.get(curGifNum).setBitmap(image);
+		}else{
+			gm.setBitmap(image);
+		}									
+		if (isEdit){
+			//编辑模式,取得相应的gif model并修改属性
+			Util.gmList.get(curGifNum).setBgBitmap(Util.background);
+			Util.gmList.get(curGifNum).setBotWord(gifShowWord.getText().toString());
+			Util.gmList.get(curGifNum).setHead(Util.curShowingHead);
+			Util.gmList.get(curGifNum).setBody(Util.curShowingBody);
+		}else{
+			//插入模式,添加一个新gif model
+			gm.setBgBitmap(Util.background);
+			gm.setBotWord(gifShowWord.getText().toString());
+			gm.setHead(Util.curShowingHead);
+			gm.setBody(Util.curShowingBody);
+			Util.gmList.add(curGifNum,gm);
+		}
+		//退出后清空记录的图片背景
+		if(Util.background!=null) {
+			Util.background = null;
+		}		
 	}
 
 	private Bitmap[] matchPicsFromCurStaticPic() {
-		
 		Log.v(TAG, "执行makeImages,获取当前展示的头和身子,获取他们的多张静态图片,进行多次的拼接(makeimage)");
 		Bitmap[] images = new Bitmap[AppConstantS.GIF_FRAMECOUNT];
-
-		try {
-			for (int i = 0; i < images.length; i++) {
-				images[i] = matchPic(Util.head[i], Util.body[i]);;
-			}
-		} catch (Exception e) {
-			Log.v(TAG, "执行makeImages失败");
-			e.printStackTrace();
-		}		
+		for (int i = 0; i < images.length; i++) {
+			images[i] = matchPic(Util.head, Util.body[i]);;
+		}	
 		return images;		
 	}
-	JpgToGif j;
+
 	public void picsToGif() {
-		j = new JpgToGif(this.handler);
-	
+		if(j2g==null) {
+			j2g = new JpgToGif(this.handler);
+		}
+		j2g.startJpgToGif();
 		String path = Util.getAppStorePath() +  File.separator+AppConstantS.GIF_STORENAME;
 		try {
 			//参数为,images和存储的目标路径
-			j.jpgToGif(matchPicsFromCurStaticPic(), path);
+			j2g.jpgToGif(matchPicsFromCurStaticPic(), path);
 			Log.v(TAG, "制作Gif完毕，图片被保存入：" + path);
 		} catch (Exception e) {
-			Log.v(TAG, "制作Gif失败了,请检查jpgToGif");
+			e.printStackTrace();
 		}
 	}
 
 	public void onClick(View v) {
 		switch (v.getId()) {
 		case R.id.topbar_btn_back:
+			gifBody.destroy();
 			if (isFromStoryMode){
 				// 返回故事编辑页面
 				Intent in = new Intent(PicEditActivity.this,StoryEditActivity.class);
-				//in.putExtra(GifModel.NAME, gm);
 				setResult(0, in);
 				PicEditActivity.this.finish();
 			}else{
@@ -1048,29 +1007,34 @@ public class PicEditActivity extends Activity implements OnClickListener {
 			
 		case R.id.topbar_btn_right:
 			Log.v(TAG,"用户点击分享，开始制作动图中。。。");
-			Log.v(TAG,"判断程序的启动是否来自微信的回调" + PicEditActivity.isFromWX);
 			//关闭有该按钮点击功能直到线程结束，防止连续点击
 			topbar_btnRight.setClickable(false);
-			
-			HashMap<String,String> map = new HashMap<String,String>();
-			map.put("headNum",Util.curShowingHead+"");
-			map.put("bodyNum",Util.curShowingBody+""); 
-			MobclickAgent.onEvent(PicEditActivity.this, "sharenum", map);  
-			
+			//当来自微信回调时,记录事件
 			if (isFromWX) {
 				MobclickAgent.onEvent(PicEditActivity.this, AppConstantS.UMENG_SHARE_FROM_WEIXIN);
 			}
+			//防止连续点击产生bug
 			if(!topbar_btnRight.isClickable()) {
-				mgTask = new MakeGifTask();
-				mgTask.execute();
+				if(isFromStoryMode) {
+					gifBody.destroy();
+					recordForStoryMode();
+					//故事模式,,直接记录返回StoryEdit
+					Intent in = new Intent(PicEditActivity.this,StoryEditActivity.class);
+					setResult(StoryEditActivity.ResNumFromPicEdit, in);
+					PicEditActivity.this.finish();
+				} else {
+					//表情模式,拼GIF
+					gifBody.pauseGifAnimation();
+					HashMap<String,String> map = new HashMap<String,String>();
+					map.put("headNum",Util.curShowingHead+"");
+					map.put("bodyNum",Util.curShowingBody+""); 
+					MobclickAgent.onEvent(PicEditActivity.this, "sharenum", map);  
+					mgTask = new MakeGifTask();
+					mgTask.execute();
+				}
 			}
-			break;
-		default:
-			break;
 		}
 	}
-
-	
 	
 	protected void onPause() {
 		super.onPause();
@@ -1094,94 +1058,70 @@ public class PicEditActivity extends Activity implements OnClickListener {
 			ibDelCam.setVisibility(View.INVISIBLE);
 		}
 	}
-	
+
 	@Override
-	protected void onStop() {
-		super.onStop();
-	}
-	
-	@Override
-	public void onConfigurationChanged(Configuration newConfig) {  
-        // TODO Auto-generated method stub  
-        Log.i("UserInfoActivity", "onConfigurationChanged");  
+	public void onConfigurationChanged(Configuration newConfig) {   
         if(newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE) {  
-            Log.i("UserInfoActivity", "横屏");  
             Configuration o = newConfig;  
             o.orientation = Configuration.ORIENTATION_PORTRAIT;  
             newConfig.setTo(o);  
         } else if(newConfig.orientation == Configuration.ORIENTATION_PORTRAIT) {  
-            Log.i("UserInfoActivity", "竖屏");  
         }  
         super.onConfigurationChanged(newConfig);  
     }
 	
 	class MakeGifTask extends AsyncTask<Void, Void, Boolean> {
-		private boolean flag = true;
 		@Override
 		protected void onPreExecute() {
 			super.onPreExecute();
-			//还原进度条坐标
-		
 			//故事模式不在这里生成图片，所以跳过此步
 			if(!isFromStoryMode) {
 				makeGifTimeDialog.setTitle("正在合成动画中");
 				makeGifTimeDialog.setMessage("请稍候...");
 				makeGifTimeDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
 				makeGifTimeDialog.show();
-			}else{
-//				makeGifTimeDialog.setTitle("正在合成动画中");
-//				makeGifTimeDialog.setMessage("请稍候...");
-//				makeGifTimeDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
-//				makeGifTimeDialog.show();
 			}
-		
 		}
+		
 		@Override
 		protected Boolean doInBackground(Void... params) {
 			Boolean result = true;
-			gifBody.pauseGifAnimation();
 			Log.v(TAG, "开始执行异步任务jpg2gif，gif生成中");
 			
 			try {
-				if (isFromStoryMode){
-					matchPicsFromCurStaticPicStory();
-				}else{
-					picsToGif();
-				}
+				picsToGif();
 			} catch (Exception e) {
 				e.printStackTrace();
 				result = false;
-				Log.v(TAG, "jpg2gif失败");
 			}
 			return result;
 		}
 
-		/* (non-Javadoc)
-		 * @see android.os.AsyncTask#onCancelled()
-		 */
 		@Override
 		protected void onCancelled() {
 			super.onCancelled();
-			j.stopJpgToGif();
-			if(makeGifTimeDialog!=null) {			
-				makeGifTimeDialog.setProgress(0);
-				makeGifTimeDialog.dismiss();
+			//停止异步线程
+			j2g.stopJpgToGif();
+		//	if(makeGifTimeDialog!=null) {	
+//				count=1;
+//				makeGifTimeDialog.setProgress(0);
+//				makeGifTimeDialog.dismiss();
 				//恢复右键功能
-				if(!topbar_btnRight.isClickable()) {
-					topbar_btnRight.setClickable(true);
-				}
-				System.out.println("cancelcount"+count);
-			}
+//				if(!topbar_btnRight.isClickable()) {
+//					topbar_btnRight.setClickable(true);
+//				}
+		//	}
+			
+			//gifBody.restartGifAnimation();
 		}
 		
 		@Override
 		protected void onPostExecute(Boolean result) {
 			super.onPostExecute(result);
-			count = 0;
 			//生成完毕后关闭进度条
 			if(makeGifTimeDialog!=null) {			
-				makeGifTimeDialog.setProgress(0);
-				makeGifTimeDialog.dismiss();
+//				makeGifTimeDialog.setProgress(0);
+//				makeGifTimeDialog.dismiss();
 				//恢复右键功能
 				if(!topbar_btnRight.isClickable()) {
 					topbar_btnRight.setClickable(true);
@@ -1214,67 +1154,35 @@ public class PicEditActivity extends Activity implements OnClickListener {
 					finish();
 					System.exit(0);
 				} else {
-					//应当传入图新生成或编辑图片的编号
-					if (isFromStoryMode){						
-						//销毁gifhead和gifbody						
-						//判断是否故事模式，是的话,把每一个生成的图片的编号记录存放进去，以备以后集体生成
-						//存储背景
-						//存储底部文字
-						//存储头部（静态）
-						//存储身子（动态）
-						//if (Util.background == null) backgroundbitm = null;
-						if (isEdit){
-							Util.gmList.get(curGifNum).setBgBitmap(Util.background);
-							Util.gmList.get(curGifNum).setBotWord(gifShowWord.getText().toString());
-							Util.gmList.get(curGifNum).setHead(Util.curShowingHead);
-							//Bitmap[] bodytemp = Util.body;
-							Util.gmList.get(curGifNum).setBody(Util.curShowingBody);
-						}else{
-							gm.setBgBitmap(Util.background);
-							gm.setBotWord(gifShowWord.getText().toString());
-							gm.setHead(Util.curShowingHead);
-							//Bitmap[] bodytemp = Util.body;
-							gm.setBody(Util.curShowingBody);
-							System.out.println("body+已经存储啦");
-							//Util.gmList.add(gm);
-							Util.gmList.add(curGifNum,gm);
-							System.out.println("size"+Util.gmList.size());
-						}
-						//退出后清空记录的图片背景
-						if(Util.background!=null) {
-							Util.background = null;
-						}						
-						// 初始化topbar右边按钮
-						Intent in = new Intent(PicEditActivity.this,StoryEditActivity.class);
-						//in.putExtra(GifModel.NAME, gm);
-						setResult(StoryEditActivity.ResNumFromPicEdit, in);
-						PicEditActivity.this.finish();
-					}else {
-						Intent in = new Intent(PicEditActivity.this,PicShareActivity.class);
-						in.putExtra(AppConstantS.FROM_ACTIVITY_NAME, PicEditActivity.this.getClass().getName());
-						PicEditActivity.this.startActivity(in);
-						//PicEditActivity.this.finish();
-					}
+//					Intent in = new Intent(PicEditActivity.this,PicShareActivity.class);
+//					in.putExtra(AppConstantS.FROM_ACTIVITY_NAME, PicEditActivity.this.getClass().getName());
+//					startActivityForResult(in, AppConstantS.EMOJ_TO_GIFSHARE);
 				}
 			} 
 		}
 	}
-
+	
+	private long lastShakeTime = 0;
 	//初始化摇一摇的监听
 	private void initShakeLisener() {
 		mShakeListener = new ShakeListener(this);
 		mShakeListener.setOnShakeListener(new OnShakeListener() {
-			public void onShake() {
-				mShakeListener.stop();
-				handler.postDelayed(new Runnable() {
-					public void run() {
-						//发送摇一摇线程消息
-						Message msg = new Message();
-						msg.what = SENSOR_SHAKE;
-						handler.sendMessage(msg);
-						mShakeListener.start();
-					}
-				}, 20);
+			public void onShake() {	
+				long curShakeTime = System.currentTimeMillis();
+				System.out.println(curShakeTime-lastShakeTime);
+				if(curShakeTime-lastShakeTime>=1000) {
+					mShakeListener.stop();
+					handler.postDelayed(new Runnable() {
+						public void run() {
+							//发送摇一摇线程消息
+							Message msg = new Message();
+							msg.what = SENSOR_SHAKE;
+							handler.sendMessage(msg);
+							mShakeListener.start();
+						}
+					}, 20);
+					lastShakeTime = curShakeTime;
+				}
 			}
 		});
 	}
@@ -1291,8 +1199,7 @@ public class PicEditActivity extends Activity implements OnClickListener {
 				if (isFromStoryMode){
 					// 返回故事编辑页面
 					Intent in = new Intent(PicEditActivity.this,StoryEditActivity.class);
-					//in.putExtra(GifModel.NAME, gm);
-					setResult(0, in);
+					setResult(StoryEditActivity.ResNumFromCancel, in);
 					PicEditActivity.this.finish();
 				}else{
 					//退出后清空记录的图片背景

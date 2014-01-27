@@ -19,6 +19,11 @@ public class JpgToGif {
 		this.flag = false;
 	}
 	
+	public void startJpgToGif() {
+		curFrameNum = 0;
+		this.flag = true;
+	}
+	
 	public boolean getFlag() {
 		return flag;
 	}
@@ -38,15 +43,13 @@ public class JpgToGif {
 			AnimatedGifEncoder1 e = new AnimatedGifEncoder1();
 			e.setRepeat(0);
 			e.start(newPic);
-			
 			for (int i = 0; i < pic.length; i++) {
-				curFrameNum = i+1;
+				curFrameNum = i;
 				// 设置播放的延迟时间
 				if(flag) {
 					e.setDelay(100);
 					e.addFrame(pic[i]); 
 					//添加到帧中
-					//pic[i].recycle();
 					Message msg = new Message();  
 			        msg.what = PicEditActivity.MATCH_A_FRAME;  
 			        handler.sendMessage(msg); 

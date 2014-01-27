@@ -6,14 +6,18 @@ import android.R.integer;
 
 public interface AppConstantS {
 	public static final String FROM_ACTIVITY_NAME = "ACTIVITYNAME";
-	public static final String STORY_MODE = "STORY_MODE";
-	public static final String STORY_GIF_NUM = "STORYGIFNUM";
+	public static final String STORY_MODE = "story_mode";
+	public static final String STORY_GIF_NUM = "story_curgifnum";
 	
+	public static final int EMOJ_TO_GIFSHARE = 300;
+	public static final int GIFSHARE_B_EMOJ  = 301;
 	//友盟事件
 	public static final String UMENG_SHARE_TO_WEIXIN = "share_to_weixin";
 	public static final String UMENG_SHARE_TO_WEIBO  = "share_to_weibo";
 	public static final String UMENG_SHARE_TO_RENREN = "share_to_renren";
 	public static final String UMENG_SHARE_FROM_WEIXIN = "share_from_weixin";
+	public static final String UMENG_MAKE_EMOJ = "make_emoj";
+	public static final String UMENG_MAKE_STORY = "make_story";
 	
 	//头部和身子的数量
 	public static int headNumber = 20;
@@ -47,7 +51,7 @@ public interface AppConstantS {
 	public static final String PNG_STORENAME = "result.png";
 	//GIF图片默认背景的目录和文件名
 	public static final String GIFBG_FOLDERNAME = "background";
-	public static final String GIFBG_FILENAME = "bg_320_350.png";
+	public static final String GIFBG_FILENAME = "bg2_320_350.png";
 	//相机根目录,相机返回参数成功，相机未照相直接返回
 	public static final String CAMPIC_ROOT = "mnt/sdcard/DCIM/Camera/";
 	public static final int CAM_RETURN_OK = -1;

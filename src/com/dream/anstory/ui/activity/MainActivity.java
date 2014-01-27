@@ -39,7 +39,7 @@ public class MainActivity extends Activity {
         makeGif = (Button)findViewById(R.id.main_btn_facemode);
         makeGif.setOnClickListener(new OnClickListener() {
 			public void onClick(View v) {
-				// TODO Auto-generated method stub
+				MobclickAgent.onEvent(MainActivity.this, AppConstantS.UMENG_MAKE_EMOJ);
 				Intent in = new Intent(MainActivity.this,PicEditActivity.class);
 				in.putExtra(AppConstantS.FROM_ACTIVITY_NAME, MainActivity.this.getClass().getName());
 				MainActivity.this.startActivity(in);
@@ -50,9 +50,8 @@ public class MainActivity extends Activity {
         makeStory = (Button)findViewById(R.id.main_btn_storymode);
         makeStory.setOnClickListener(new OnClickListener() {
 			public void onClick(View v) {
-				// TODO Auto-generated method stub
+				MobclickAgent.onEvent(MainActivity.this, AppConstantS.UMENG_MAKE_STORY);
 				Intent in = new Intent(MainActivity.this,StoryEditActivity.class);
-//				Intent in = new Intent(FirstActivity.this,PicShareActivity.class);
 				MainActivity.this.startActivity(in);
 				MainActivity.this.finish();
 			}

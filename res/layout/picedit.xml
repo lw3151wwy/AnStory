@@ -35,15 +35,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"                        
             android:background="@drawable/picedit_toolbar_btn_changebody_nor"
-            android:layout_weight="1"/>     
-            
-        <!-- 更换背景-->
-        <Button
-            android:id="@+id/changeframe"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"            
-            android:background="@drawable/picedit_toolbar_btn_changehead_nor"
-            android:layout_weight="1"/>
+            android:layout_weight="1"/>   
         
 		<!-- 拍摄背景 -->                
         <Button
@@ -188,9 +180,9 @@
 		</LinearLayout>				
 	</HorizontalScrollView>
     
-    <!-- 选择边框 -->
+    <!-- 选择背景 -->
     <HorizontalScrollView
-	    android:id="@+id/frame_chs_list"
+	    android:id="@+id/bg_chs_list"
 	    android:layout_width="fill_parent"
     	android:layout_height="wrap_content"
     	android:layout_centerHorizontal="true"
@@ -201,7 +193,7 @@
 	    <LinearLayout 
 	        android:layout_width="wrap_content"
 	    	android:layout_height="wrap_content"
-			android:id="@+id/framechslayout"
+			android:id="@+id/bgchslayout"
 			android:orientation="horizontal">
 		</LinearLayout>				
 	</HorizontalScrollView>

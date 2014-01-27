@@ -126,15 +126,6 @@ public class MyGestureListener extends GestureDetector.SimpleOnGestureListener {
 			finalTop = (float) setLayoutParams.topMargin / (float) curView.getHeight();
 			finalRight = ((float) curView.getWidth()-(float) setLayoutParams.rightMargin) / (float) curView.getWidth();
 			finalBottom = ((float) curView.getHeight()-(float) setLayoutParams.bottomMargin) / (float) curView.getHeight();
-			//gifHead.setLeft(nowLeft-(int) paramFloat1);
-			//gifHead.setTop(nowTop-(int) paramFloat2);
-			//gifHead.setRight(nowRight-(int) paramFloat1);
-			//gifHead.setBottom(nowBottom-(int) paramFloat2);
-			//gifBody.setPadding(nowLeft-(int) paramFloat1,nowTop-(int) paramFloat2,nowRight+(int) paramFloat1,nowBottom+(int) paramFloat2);
-			//gifBody.setLeft(nowLeft-(int) paramFloat1);
-			//gifBody.setTop(nowTop-(int) paramFloat2);
-			//gifBody.setRight(nowRight-(int) paramFloat1);
-			//gifBody.setBottom(nowBottom-(int) paramFloat2);
 		}else if(pointerCount == 2){
 			float x = paramMotionEvent2.getX(0) - paramMotionEvent2.getX(1);
             float y = paramMotionEvent2.getY(0) - paramMotionEvent2.getY(1);
@@ -156,13 +147,6 @@ public class MyGestureListener extends GestureDetector.SimpleOnGestureListener {
                     setLayoutParams.height =  (int) (2*h*scale);
                     gifHead.setLayoutParams(setLayoutParams);
         			gifBody.setLayoutParams(setLayoutParams);
-        			//gifHead.setScaleX(scale);
-        			//gifHead.setScaleY(scale);
-        			//gifBody.setScaleX(scale);
-        			//gifBody.setScaleY(scale);
-        			//scaleTotal为静态变量传递参数以在合成时使用
-        			//scaleTotal = scaleTotal*scale;
-        			//finalLeft与finalTop为静态变量传递参数以在合成时使用
         			finalLeft = (float) setLayoutParams.leftMargin / (float) curView.getWidth();
         			finalTop = (float) setLayoutParams.topMargin / (float) curView.getHeight();
         			finalRight = ((float) curView.getWidth()-(float) setLayoutParams.rightMargin) / (float) curView.getWidth();
@@ -170,16 +154,9 @@ public class MyGestureListener extends GestureDetector.SimpleOnGestureListener {
                 }
             }
 		}
-		Log.v("com.showgif.listener.MyGestureListener", "NEW End"+curView.getHeight());
-		Log.v("com.showgif.listener.MyGestureListener", "NEW End"+gifHead.getHeight());
-		//Log.v("com.showgif.listener.MyGestureListener", "Now Right"+" "+(width-nowRight)+" "+scale+" "+setLayoutParams.rightMargin+" "+gifHead.getWidth()*(scale-1));
 		SharedPreferences preferences;
 		SharedPreferences.Editor editors;
-		preferences = context.getSharedPreferences("help_showtimes", Context.MODE_PRIVATE);
-		editors = preferences.edit();
-		int times = 1;		
-		editors.putInt("times", times);
-		editors.commit();
+		Util.helpNoUse = 1;
 		return true;
 	}
 

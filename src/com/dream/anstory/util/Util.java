@@ -15,6 +15,7 @@ import java.util.Date;
 
 import junit.framework.Assert;
 
+import android.R.integer;
 import android.content.Context;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
@@ -30,11 +31,13 @@ import android.view.WindowManager;
 public class Util {
 	public static int curShowingHead;
 	public static int curShowingBody;
-	public static Bitmap[] head = new Bitmap[AppConstantS.GIF_FRAMECOUNT];
+	public static Bitmap head ;
 	public static Bitmap[] body = new Bitmap[AppConstantS.GIF_FRAMECOUNT];
 	public static Bitmap background;
 	public static Bitmap defaultbg;
-
+	public static int curMakeFrame;//decoder时，用来记录当前正在做第几张 ，当取消jpg2gif时，需清0
+	//进入picedit却没有使用拖放功能的次数
+	public static int helpNoUse = 0;
 	//存放图图片数据的列表
 	public static ArrayList<GifModel> gmList =new ArrayList<GifModel>();
 	//是否第一次制作GIF，用于给予帮助信息
@@ -340,7 +343,6 @@ public class Util {
 	
 	//计算相机图片默认角度
 	public static Bitmap calPicFromPath(String mPhotoPath) {
-	    
         BitmapFactory.Options newOpts = new BitmapFactory.Options();  
         //开始读入图片，此时把options.inJustDecodeBounds 设回true了  
         newOpts.inJustDecodeBounds = true; 
@@ -397,5 +399,8 @@ public class Util {
 		bitmap = Util.zoomBitmap(bitmap,AppConstantS.FINAL_GIF_WIDTH,AppConstantS.FINAL_GIF_HEIGHT);
 		//返回该图片
 		return bitmap;
+	}
+	public static void startHelpAnim() {
+
 	}
 }
