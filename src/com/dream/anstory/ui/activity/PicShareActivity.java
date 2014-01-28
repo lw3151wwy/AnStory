@@ -68,9 +68,9 @@ public class PicShareActivity extends Activity {
 	
 	//传递从哪里来
 	private Bundle bundle;
-	//来自故事模式，来自编辑模式
+	//来自故事模式，来自表情
 	private boolean isFromStory; 
-	private boolean isFromEdit;
+	private boolean isFromEmoj;
 	// 微博缩略图
 	private static final int THUMB_SIZE = 120;
 	private IWXAPI mmAPI;
@@ -96,8 +96,8 @@ public class PicShareActivity extends Activity {
 		bundle = getIntent().getExtras();
 		if (bundle.getString(AppConstantS.FROM_ACTIVITY_NAME).equals(StoryEditActivity.class.getName())) {
 			isFromStory = true;
-		} else if(bundle.getString(AppConstantS.FROM_ACTIVITY_NAME).equals(StoryEditActivity.class.getName())) {
-			isFromEdit = true;
+		} else if(bundle.getString(AppConstantS.FROM_ACTIVITY_NAME).equals(PicEditActivity.class.getName())) {
+			isFromEmoj = true;
 		}
 		// 设置MAIN的大标题
 		TextView tv = (TextView) findViewById(R.id.topbar_titletxt);
@@ -107,6 +107,13 @@ public class PicShareActivity extends Activity {
 		btnLeft.setVisibility(View.VISIBLE);
 		btnLeft.setOnClickListener(new OnClickListener() {
 			public void onClick(View v) {
+				Intent in = new Intent(PicShareActivity.this,PicEditActivity.class);
+				if(isFromEmoj) {
+					setResult(AppConstantS.GIFSHARE_B_EMOJ,in);
+				} else if(isFromStory) {
+					setResult(AppConstantS.GIFSHARE_B_STORY,in);
+		
+				}
 				PicShareActivity.this.finish();
 			}
 		});
@@ -397,7 +404,11 @@ public class PicShareActivity extends Activity {
 		switch (keyCode) {
 		case KeyEvent.KEYCODE_BACK:
 			Intent in = new Intent(PicShareActivity.this,PicEditActivity.class);
-			setResult(AppConstantS.GIFSHARE_B_EMOJ,in);
+			if(isFromEmoj) {
+				setResult(AppConstantS.GIFSHARE_B_EMOJ,in);
+			} else if(isFromStory) {
+				setResult(AppConstantS.GIFSHARE_B_STORY,in);
+			}
 			PicShareActivity.this.finish();
 		}
 		return super.onKeyDown(keyCode, event);

@@ -11,6 +11,8 @@ public interface AppConstantS {
 	
 	public static final int EMOJ_TO_GIFSHARE = 300;
 	public static final int GIFSHARE_B_EMOJ  = 301;
+	public static final int STORY_TO_GIFSHARE = 400;
+	public static final int GIFSHARE_B_STORY = 401;
 	//ÓÑÃËÊÂ¼þ
 	public static final String UMENG_SHARE_TO_WEIXIN = "share_to_weixin";
 	public static final String UMENG_SHARE_TO_WEIBO  = "share_to_weibo";

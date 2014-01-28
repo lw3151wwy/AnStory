@@ -14,6 +14,7 @@ import android.content.Context;
 import android.content.CursorLoader;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnCancelListener;
+import android.content.DialogInterface.OnKeyListener;
 import android.content.res.Configuration;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -196,6 +197,7 @@ public class PicEditActivity extends Activity implements OnClickListener {
 
 		initData();
 		initButton();
+		initShakeLisener();
 		
 		//初始化移动和缩放参数
 		MyGestureListener.finalLeft = 0;
@@ -254,6 +256,7 @@ public class PicEditActivity extends Activity implements OnClickListener {
 		gifBody.setGifImageType(GifImageType.COVER);
 		gifBody.setLoopAnimation();
 		
+		//new PicEditHelp();
 		//帮助动画
 		SharedPreferences preferences = getSharedPreferences("help_showtimes", Context.MODE_PRIVATE);
 		SharedPreferences.Editor editors = preferences.edit();
@@ -297,6 +300,9 @@ public class PicEditActivity extends Activity implements OnClickListener {
 		//从表情--》分享--》表情  
 		if(requestCode==AppConstantS.EMOJ_TO_GIFSHARE && resultCode==AppConstantS.GIFSHARE_B_EMOJ) {
 			System.out.println("GifShare B PicEdit");
+			//为了使显示完美，用此方法，当从PICEDIT-->SHARE时，保留100%进度，回来时先设再消。
+			makeGifTimeDialog.setProgress(0);
+			makeGifTimeDialog.dismiss();
 		}
 		//拍照
 		if (requestCode == TAKE_PHOTO) {
@@ -480,13 +486,34 @@ public class PicEditActivity extends Activity implements OnClickListener {
 			gifShowWord.setText(Util.gmList.get(curGifNumini).getBotWord());
 		}
 		//进度条初始化
-		makeGifTimeDialog = (ProgressDialog)new ProgressDialog(PicEditActivity.this);
-		makeGifTimeDialog.setOnCancelListener(new OnCancelListener() {
-			public void onCancel(DialogInterface dialog) {		
-				//取消进度条时，取消JPG2GIF的异步任务
-				mgTask.cancel(true);
-			}
-		});
+		if(makeGifTimeDialog==null) {
+			makeGifTimeDialog = (ProgressDialog)new ProgressDialog(PicEditActivity.this);
+			makeGifTimeDialog.setTitle("正在合成动画中");
+			makeGifTimeDialog.setMessage("请稍候...");
+			makeGifTimeDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+			makeGifTimeDialog.setCancelable(false);
+			makeGifTimeDialog.setOnKeyListener(new OnKeyListener() {
+				public boolean onKey(DialogInterface dialog, int keyCode, KeyEvent event) {
+					//此写法是为控制在取消之前,设置makegiftimedialog一些属性,如果直接后退取消不捕捉事件则无法修改.
+					//停止拼接任务,
+					if (keyCode == KeyEvent.KEYCODE_BACK && event.getAction() == KeyEvent.ACTION_DOWN) {
+						//终止异步任务，终止jpg里的循环
+						j2g.stopJpgToGif();
+						mgTask.cancel(true);
+						//回到第一帧计数，进度条归0，dialog关闭 
+						count = 0;
+						makeGifTimeDialog.setProgress(0);
+						makeGifTimeDialog.dismiss();
+						//恢复右键功能和动画
+						gifBody.restartGifAnimation();
+						if(!topbar_btnRight.isClickable()) {
+							topbar_btnRight.setClickable(true);
+						}
+					}
+					return false;
+				}
+			});
+		} 
 		// 选择头部和身子的按钮
 		changehead = (Button) this.findViewById(R.id.changehead);
 		changebody = (Button) this.findViewById(R.id.changebody);
@@ -817,36 +844,26 @@ public class PicEditActivity extends Activity implements OnClickListener {
 			switch (msg.what) {
 				case SENSOR_SHAKE:
 					Log.v(TAG, "编辑页面中，用户在摇动手机，正在执行随机为用户选图");
+					mShakeListener.start();
 					ranChsPic();
-					//摇一摇的声音
-					((android.os.Vibrator)PicEditActivity.this.getApplication().getSystemService(VIBRATOR_SERVICE)).vibrate(new long[]{500,200}, -1); 
 					break;
 					
 				case MATCH_A_FRAME:
-					System.out.println("getProgress"+makeGifTimeDialog.getProgress());
-					if(!j2g.getFlag()) {
-						count=1;
-						makeGifTimeDialog.setProgress(0);
-						if(!topbar_btnRight.isClickable()) {
-							topbar_btnRight.setClickable(true);
-						}
-						gifBody.restartGifAnimation();
-						return;
-					}
+					//（正常进度1,2,3,4,5,6,7,8，9)
+					//（当中途中段时，1,2,3,4,5. 先count=0,然后进入到这里,setprogress为0，然后count+1,回到初始状态
 					makeGifTimeDialog.setProgress(count*11);
 					count++;
 					//把跳转放在这里以便进度条显示更准确
 					if(count==(AppConstantS.GIF_FRAMECOUNT+1)) {
 						count=1;
-						makeGifTimeDialog.setProgress(0);
-						makeGifTimeDialog.dismiss();
+						makeGifTimeDialog.setProgress(100);
 						Intent in = new Intent(PicEditActivity.this,PicShareActivity.class);
 						in.putExtra(AppConstantS.FROM_ACTIVITY_NAME, PicEditActivity.this.getClass().getName());
 						startActivityForResult(in, AppConstantS.EMOJ_TO_GIFSHARE);
 					}
 					break; 
 					
-				case OUTPUT_KEYBOARD:
+			case OUTPUT_KEYBOARD:
 					InputMethodManager imm = (InputMethodManager) PicEditActivity.this.getSystemService(Context.INPUT_METHOD_SERVICE);
 					imm.toggleSoftInput(0, InputMethodManager.HIDE_NOT_ALWAYS); 
 		    }  
@@ -1051,7 +1068,10 @@ public class PicEditActivity extends Activity implements OnClickListener {
 		super.onResume();
 		Log.v(TAG , "OnResume...");
 		MobclickAgent.onResume(this);
-		initShakeLisener();
+		if(mShakeListener!=null) {
+			mShakeListener.start();
+		}
+		//initShakeLisener();
 		if(Util.background != null) {
 			ibDelCam.setVisibility(View.VISIBLE);
 		} else{
@@ -1075,12 +1095,7 @@ public class PicEditActivity extends Activity implements OnClickListener {
 		protected void onPreExecute() {
 			super.onPreExecute();
 			//故事模式不在这里生成图片，所以跳过此步
-			if(!isFromStoryMode) {
-				makeGifTimeDialog.setTitle("正在合成动画中");
-				makeGifTimeDialog.setMessage("请稍候...");
-				makeGifTimeDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
-				makeGifTimeDialog.show();
-			}
+			makeGifTimeDialog.show();
 		}
 		
 		@Override
@@ -1098,35 +1113,13 @@ public class PicEditActivity extends Activity implements OnClickListener {
 		}
 
 		@Override
-		protected void onCancelled() {
-			super.onCancelled();
-			//停止异步线程
-			j2g.stopJpgToGif();
-		//	if(makeGifTimeDialog!=null) {	
-//				count=1;
-//				makeGifTimeDialog.setProgress(0);
-//				makeGifTimeDialog.dismiss();
-				//恢复右键功能
-//				if(!topbar_btnRight.isClickable()) {
-//					topbar_btnRight.setClickable(true);
-//				}
-		//	}
-			
-			//gifBody.restartGifAnimation();
-		}
-		
-		@Override
 		protected void onPostExecute(Boolean result) {
 			super.onPostExecute(result);
-			//生成完毕后关闭进度条
-			if(makeGifTimeDialog!=null) {			
-//				makeGifTimeDialog.setProgress(0);
-//				makeGifTimeDialog.dismiss();
-				//恢复右键功能
-				if(!topbar_btnRight.isClickable()) {
-					topbar_btnRight.setClickable(true);
-				}
+			//恢复右键功能
+			if(!topbar_btnRight.isClickable()) {
+				topbar_btnRight.setClickable(true);
 			}
+			
 			if (result) {
 				String path = Util.getAppStorePath() +  File.separator+AppConstantS.GIF_STORENAME;
 				if (isFromWX) {
@@ -1168,21 +1161,18 @@ public class PicEditActivity extends Activity implements OnClickListener {
 		mShakeListener = new ShakeListener(this);
 		mShakeListener.setOnShakeListener(new OnShakeListener() {
 			public void onShake() {	
-				long curShakeTime = System.currentTimeMillis();
-				System.out.println(curShakeTime-lastShakeTime);
-				if(curShakeTime-lastShakeTime>=1000) {
-					mShakeListener.stop();
-					handler.postDelayed(new Runnable() {
-						public void run() {
-							//发送摇一摇线程消息
-							Message msg = new Message();
-							msg.what = SENSOR_SHAKE;
-							handler.sendMessage(msg);
-							mShakeListener.start();
-						}
-					}, 20);
-					lastShakeTime = curShakeTime;
-				}
+				//long curShakeTime = System.currentTimeMillis();
+				handler.postDelayed(new Runnable() {
+					public void run() {
+						//摇一摇的声音
+						((android.os.Vibrator)PicEditActivity.this.getApplication().getSystemService(VIBRATOR_SERVICE)).vibrate(new long[]{500,200}, -1); 
+						//发送摇一摇线程消息
+						Message msg = new Message();
+						msg.what = SENSOR_SHAKE;
+						handler.sendMessage(msg);
+						//mShakeListener.start();
+					}
+				}, 20);
 			}
 		});
 	}

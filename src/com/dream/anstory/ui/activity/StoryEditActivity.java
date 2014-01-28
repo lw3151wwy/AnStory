@@ -9,6 +9,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.DialogInterface.OnCancelListener;
+import android.content.DialogInterface.OnKeyListener;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -86,7 +87,7 @@ public class StoryEditActivity extends Activity{
 	private TextView authorView;
 	//作者文本
 	private String tempText;
-    int count = 0;
+    int count = 1;
 	
     ScrollView scrollView;
     private MakeGifTask mgTask ;
@@ -103,13 +104,33 @@ public class StoryEditActivity extends Activity{
 	private void initData() {
 		picList = new ArrayList<RelativeLayout>();	
 		//生成图片时要用到的进度条
-		makeGifTimeDialog = (ProgressDialog)new ProgressDialog(StoryEditActivity.this);
-		makeGifTimeDialog.setOnCancelListener(new OnCancelListener() {
-			public void onCancel(DialogInterface dialog) {		
-				//取消进度条时，取消JPG2GIF的异步任务
-				mgTask.cancel(true);
-			}
-		});
+		
+		if(makeGifTimeDialog==null) {
+			makeGifTimeDialog = (ProgressDialog)new ProgressDialog(StoryEditActivity.this);
+			makeGifTimeDialog.setTitle("正在合成动画中");
+			makeGifTimeDialog.setMessage("请稍候...");
+			makeGifTimeDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+			makeGifTimeDialog.setCancelable(false);
+			makeGifTimeDialog.setOnKeyListener(new OnKeyListener() {
+				public boolean onKey(DialogInterface dialog, int keyCode, KeyEvent event) {
+					//此写法是为控制在取消之前,设置makegiftimedialog一些属性,如果直接后退取消不捕捉事件则无法修改.
+					//停止拼接任务,
+					if (keyCode == KeyEvent.KEYCODE_BACK && event.getAction() == KeyEvent.ACTION_DOWN) {
+						//终止异步任务，终止jpg里的循环
+						j2g.stopJpgToGif();
+						mgTask.cancel(true);
+						if(!topbar_btnRight.isClickable()) {
+							topbar_btnRight.setClickable(true);
+						}
+						//回到第一帧计数，进度条归0，dialog关闭 
+						count = 0;
+						makeGifTimeDialog.setProgress(0);
+						makeGifTimeDialog.dismiss();
+					}
+					return false;
+				}
+			});
+		} 
 		//获得主容器,用于放每个子容器（子容器装着每一张故事的预览图片）
 		mainLayout = (LinearLayout)findViewById(R.id.storylayout);		
 		//计算屏幕宽度
@@ -314,6 +335,14 @@ public class StoryEditActivity extends Activity{
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 		super.onActivityResult(requestCode, resultCode, data);
 		// 可以根据多个请求代码来作相应的操作
+		if(requestCode==AppConstantS.STORY_TO_GIFSHARE&&resultCode==AppConstantS.GIFSHARE_B_STORY) {
+			System.out.println("GifShare B PicStory");
+			//为了使显示完美，用此方法，当从PICEDIT-->SHARE时，保留100%进度，回来时先设再消。
+			makeGifTimeDialog.setProgress(0);
+			makeGifTimeDialog.dismiss();
+		}
+		
+		
 		if (requestCode == ResNumFromPicAdd && resultCode != 0) {
 			//改变添加按钮大小
 			android.widget.LinearLayout.LayoutParams paramsAddNewGif = new android.widget.LinearLayout.LayoutParams(devWid-devWid/10, (devWid-devWid/10) * AppConstantS.FINAL_GIF_HEIGHT / AppConstantS.FINAL_GIF_WIDTH/4);
@@ -537,9 +566,6 @@ public class StoryEditActivity extends Activity{
 		@Override
 		protected void onPreExecute() {
 			super.onPreExecute();
-			makeGifTimeDialog.setTitle("正在合成动画中");
-			makeGifTimeDialog.setMessage("请稍候...");
-			makeGifTimeDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
 			makeGifTimeDialog.show();
 		}
 		@Override
@@ -565,14 +591,6 @@ public class StoryEditActivity extends Activity{
 			if(!topbar_btnRight.isClickable()) {
 				topbar_btnRight.setClickable(true);
 			}
-			//生成完毕后关闭进度条
-			if(makeGifTimeDialog!=null) {			
-				makeGifTimeDialog.setProgress(0);
-				makeGifTimeDialog.cancel();
-			}
-			Intent in = new Intent(StoryEditActivity.this,PicShareActivity.class);
-			in.putExtra(AppConstantS.FROM_ACTIVITY_NAME, StoryEditActivity.this.getClass().getName());
-			StoryEditActivity.this.startActivity(in);
 		}
 		
 		@Override
@@ -623,7 +641,18 @@ public class StoryEditActivity extends Activity{
 			super.handleMessage(msg);
 			switch (msg.what) {
 				case MATCH_A_FRAME:
-					makeGifTimeDialog.setProgress(j2g.getCurFrameNum()*11);
+					//（正常进度1,2,3,4,5,6,7,8，9)
+					//（当中途中段时，1,2,3,4,5. 先count=0,然后进入到这里,setprogress为0，然后count+1,回到初始状态
+					makeGifTimeDialog.setProgress(count*11);
+					count++;
+					//把跳转放在这里以便进度条显示更准确
+					if(count==(AppConstantS.GIF_FRAMECOUNT+1)) {
+						count=1;
+						makeGifTimeDialog.setProgress(100);
+						Intent in = new Intent(StoryEditActivity.this,PicShareActivity.class);
+						in.putExtra(AppConstantS.FROM_ACTIVITY_NAME, StoryEditActivity.this.getClass().getName());
+						startActivityForResult(in, AppConstantS.STORY_TO_GIFSHARE);
+					}
 				break; 
 		    }  
 			super.handleMessage(msg);      
